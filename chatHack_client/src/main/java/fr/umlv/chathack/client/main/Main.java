@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import fr.umlv.chathack.client.core.ChatHackClient;
+import fr.umlv.chathack.client.core.UserInput;
 
 public class Main {
 	
@@ -19,26 +20,24 @@ public class Main {
 			return;
 		}
 		
-		if ( Files.isDirectory(Paths.get(args[3])) ) {
+		if ( !Files.isDirectory(Paths.get(args[2])) ) {
 			System.out.println("The given directory path is not valid");
 			return;
 		}
 		
 		try {
-			Integer.parseInt(args[2]);
+			Integer.parseInt(args[1]);
 		} catch (NumberFormatException e) {
 			System.out.println("Port number not valid");
 			return;
 		}
 		
-		ChatHackClient client;
-		if ( args.length == 4 ) {
-			client = new ChatHackClient(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[3]);
-		} else {
-			client = new ChatHackClient(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[3], args[4]);
-		}
-		
+		ChatHackClient client = args.length == 4 ? new ChatHackClient(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[3])
+												 : new ChatHackClient(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[3], args[4]);
 		client.launch();
+		
+		UserInput input = new UserInput(client);
+		input.interact();
 	}
 
 }

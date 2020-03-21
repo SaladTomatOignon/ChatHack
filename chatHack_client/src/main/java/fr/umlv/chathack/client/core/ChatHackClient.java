@@ -8,7 +8,9 @@ import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.LinkedList;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,12 +23,16 @@ public class ChatHackClient {
 	
 	private final SocketChannel sc;
 	private final Selector selector;
+	private final SelectionKey key;
 	private final String login;
 	private final String password;
 	
     private final ByteBuffer bbin;
     private final ByteBuffer bbout;
+    private final Queue<Frame> queue;
     private final FrameReader freader;
+    
+    private final Thread mainThread;
     
     private boolean closed;
 	
@@ -35,27 +41,49 @@ public class ChatHackClient {
 	}
 	
 	public ChatHackClient(InetSocketAddress server, String login, String password) throws IOException {
+		/* Peut-être factoriser ce bloc dans une méthode initConnexion() ? Puis la placer dans launch() ? */
 		this.sc = SocketChannel.open();
 		this.sc.connect(Objects.requireNonNull(server));
 		this.selector = Selector.open();
-		this.sc.register(selector, SelectionKey.OP_WRITE);
+		this.key = sc.register(selector, SelectionKey.OP_WRITE); // Plutot le mettre en OP_READ ? Car on envois manuellement la trame de demande de connexion puis on ATTEND la réponse du serveur
 		
 		this.login = Objects.requireNonNull(login);
 		this.password = Objects.requireNonNull(password);
 		
 		this.bbin = ByteBuffer.allocate(BUFFER_SIZE);
 		this.bbout = ByteBuffer.allocate(BUFFER_SIZE);
+		this.queue = new LinkedList<>();
 		this.freader = new FrameReader(bbin);
 		
+		this.mainThread = new Thread(this::run);
 		this.closed = false;
 	}
 	
 	public void launch() throws IOException {
+		if ( mainThread.isAlive() ) {
+			throw new IllegalStateException("Client is already running");
+		}
+		try {
+			// Envoyer la trame de demande de connexion ici
+			mainThread.start();
+		} catch (UncheckedIOException tunneled) {
+			throw tunneled.getCause();
+		}
+	}
+	
+	/**
+	 * Stop the client thread.
+	 */
+	public void stop() {
+		mainThread.interrupt();
+	}
+	
+	private void run() {
 		while ( !Thread.interrupted() ) {
 			try {
 				selector.select(this::treatKey);
-			} catch (UncheckedIOException tunneled) {
-				throw tunneled.getCause();
+			} catch(IOException ioe) {
+				throw new UncheckedIOException(ioe);
 			}
 		}
 	}
@@ -70,9 +98,37 @@ public class ChatHackClient {
 			}
 		} catch (IOException e) {
 			logger.log(Level.INFO, "Connection lost with server due to IOException", e);
-			silentlyClose(key);
+			silentlyClose();
 		}
 	}
+	
+    /**
+     * Update the interestOps of the key looking
+     * only at values of the boolean closed and
+     * of both ByteBuffers.
+     *
+     * The convention is that both buffers are in write-mode before the call
+     * to updateInterestOps and after the call.
+     * Also it is assumed that process has been be called just
+     * before updateInterestOps.
+     */
+    private void updateInterestOps() {
+        int newInterestOps = 0;
+        
+        if ( bbin.hasRemaining() && !closed ) {
+        	newInterestOps |= SelectionKey.OP_READ;
+        }
+        
+        if ( (bbout.position() > 0 || !queue.isEmpty()) && !closed ) {
+        	newInterestOps |= SelectionKey.OP_WRITE;
+        }
+            
+        if ( newInterestOps == 0 ) {
+            silentlyClose();
+        } else {
+            key.interestOps(newInterestOps);
+        }
+    }
 	
     /**
      * Process the content of bbin
@@ -112,6 +168,17 @@ public class ChatHackClient {
         }
         
         processIn();
+        updateInterestOps();
+    }
+    
+    /**
+     * Try to fill bbout from the message queue
+     *
+     */
+    private void processOut() {
+        while ( !queue.isEmpty() && bbout.remaining() >= queue.element().size() ) {
+            bbout.put(queue.remove().getBytes());
+        }
     }
     
     /**
@@ -125,13 +192,26 @@ public class ChatHackClient {
 
     private void doWrite() throws IOException {
         bbout.flip();
-        
         sc.write(bbout);
-        
         bbout.compact();
+        
+        processOut();
+        updateInterestOps();
+    }
+    
+    /**
+     * Add a message to the message queue, tries to fill bbOut and updateInterestOps
+     *
+     * @param frame The frame to add
+     */
+    public void queueMessage(Frame frame) {
+        queue.add(frame);
+        
+        processOut();
+        updateInterestOps();
     }
 	
-    private void silentlyClose(SelectionKey key) {
+    private void silentlyClose() {
         Channel sc = (Channel) key.channel();
         try {
             sc.close();

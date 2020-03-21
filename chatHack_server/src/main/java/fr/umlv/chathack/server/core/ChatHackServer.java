@@ -48,6 +48,7 @@ public class ChatHackServer {
 		} catch(IOException ioe) {
 			throw new UncheckedIOException(ioe);
 		}
+		
 		try {
 			if (key.isValid() && key.isWritable()) {
 				((Context) key.attachment()).doWrite();
