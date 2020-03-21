@@ -45,6 +45,8 @@ public class StringReader implements Reader {
 
 			// size max of any string fixed at 1024
 			if (size <= 0 || size > 1024) {
+				System.out.println("String Error");
+				System.out.println(size);
 				return ProcessStatus.ERROR;
 			}
 			state = State.WAITING_TEXT;

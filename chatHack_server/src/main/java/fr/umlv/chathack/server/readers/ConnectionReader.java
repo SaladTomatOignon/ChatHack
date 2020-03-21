@@ -54,7 +54,7 @@ public class ConnectionReader implements Reader {
 
 		case WAITING_PASS:
 			status = strReader.process();
-			if (state == State.WAITING_PASS && status == ProcessStatus.DONE) {
+			if (status == ProcessStatus.DONE) {
 				pass = (String) strReader.get();
 
 				state = State.DONE;
