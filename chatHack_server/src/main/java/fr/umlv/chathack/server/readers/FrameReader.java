@@ -4,7 +4,10 @@ import java.nio.ByteBuffer;
 
 import fr.umlv.chathack.server.frames.Frame;
 
-public class FrameReader implements Reader {
+
+
+
+public class FrameReader implements Reader{
 	private enum State {
 		DONE, WAITING_OPCODE, WAITING_TRAME, ERROR
 	}
@@ -13,21 +16,29 @@ public class FrameReader implements Reader {
 	private State state = State.WAITING_OPCODE;
 
 	private byte opCode;
-
+	
 	private ConnectionReader connectionReader;
-
+	private PublicMessageReader publicMessageReader;
+	private PrivateRequestReader privateRequestReader;
+	private PrivateAnswerReader privateAnswerReader;
+	
 	private Frame frame;
+	
 
 	public FrameReader(ByteBuffer bb) {
 		this.bb = bb;
 		connectionReader = new ConnectionReader(bb);
+		publicMessageReader = new PublicMessageReader(bb);
+		privateRequestReader = new PrivateRequestReader(bb);
+		privateAnswerReader = new PrivateAnswerReader(bb);
 	}
-
+	
 //	public static FrameReaderServ createFrameReaderCli(ByteBuffer bb) {
 //		var reader = new FrameReaderServ(bb);
 //		return reader;
 //	}
 
+	
 	@Override
 	public ProcessStatus process() {
 		if (state == State.DONE || state == State.ERROR) {
@@ -51,23 +62,39 @@ public class FrameReader implements Reader {
 				frame = (Frame) connectionReader.get();
 				return ProcessStatus.DONE;
 			}
-		case 1: // TODO Call apropriate function of coresponding reader
-			System.out.println(1);
-			break;
-		case 2: // TODO Call apropriate function of coresponding reader
-			System.out.println(2);
-			break;
-		case 3: // TODO Call apropriate function of coresponding reader
-			System.out.println(3);
-			break;
-		case 4: // TODO Call apropriate function of coresponding reader
-			System.out.println(4);
-			break;
+		case 1: 
+			status = publicMessageReader.process();
+			if (status != ProcessStatus.DONE) {
+				bb.compact();
+				return status;
+			} else {
+				state = State.DONE;
+				frame = (Frame) publicMessageReader.get();
+				return ProcessStatus.DONE;
+			}
+		case 2: 
+			status = privateRequestReader.process();
+			if (status != ProcessStatus.DONE) {
+				bb.compact();
+				return status;
+			} else {
+				state = State.DONE;
+				frame = (Frame) privateRequestReader.get();
+				return ProcessStatus.DONE;
+			}
+		case 3: 
+			status = privateAnswerReader.process();
+			if (status != ProcessStatus.DONE) {
+				bb.compact();
+				return status;
+			} else {
+				state = State.DONE;
+				frame = (Frame) privateAnswerReader.get();
+				return ProcessStatus.DONE;
+			}
 		default:
-			throw new IllegalStateException("Non valid Op_Code");
+			return ProcessStatus.ERROR;
 		}
-		bb.compact();
-		return ProcessStatus.REFILL;
 	}
 
 	@Override
@@ -75,7 +102,7 @@ public class FrameReader implements Reader {
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-
+		
 		return frame;
 	}
 
@@ -86,17 +113,15 @@ public class FrameReader implements Reader {
 		switch (opCode) {
 		case 0:
 			connectionReader.reset();
-		case 1: // TODO Call apropriate function of coresponding reader
-			System.out.println(1);
 			break;
-		case 2: // TODO Call apropriate function of coresponding reader
-			System.out.println(2);
+		case 1:
+			publicMessageReader.reset();
 			break;
-		case 3: // TODO Call apropriate function of coresponding reader
-			System.out.println(3);
+		case 2: 
+			privateRequestReader.reset();
 			break;
-		case 4: // TODO Call apropriate function of coresponding reader
-			System.out.println(4);
+		case 3: 
+			privateAnswerReader.reset();
 			break;
 		default:
 			throw new IllegalStateException("Non valid Op_Code");
