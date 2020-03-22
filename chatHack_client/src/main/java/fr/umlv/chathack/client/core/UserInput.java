@@ -4,6 +4,7 @@ import java.util.Objects;
 import java.util.Scanner;
 
 import fr.umlv.chathack.client.frames.Frame;
+import fr.umlv.chathack.client.parser.MalFormedFrameException;
 import fr.umlv.chathack.client.parser.Parser;
 
 public class UserInput {
@@ -21,7 +22,7 @@ public class UserInput {
 				
 				try {
 					frame = Parser.parse(line);
-				} catch (Exception e) { // Eventuellement créer une "Mal formated frame Exception"
+				} catch (MalFormedFrameException e) {
 					System.out.println("Invalid syntax");
 					continue;
 				}

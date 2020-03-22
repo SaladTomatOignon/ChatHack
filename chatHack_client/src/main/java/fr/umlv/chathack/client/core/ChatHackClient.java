@@ -21,9 +21,11 @@ public class ChatHackClient {
 	static private Logger logger = Logger.getLogger(ChatHackClient.class.getName());
 	static final int BUFFER_SIZE = 1024;
 	
+	private final InetSocketAddress server;
 	private final SocketChannel sc;
 	private final Selector selector;
-	private final SelectionKey key;
+	private SelectionKey key;
+	
 	private final String login;
 	private final String password;
 	
@@ -41,11 +43,9 @@ public class ChatHackClient {
 	}
 	
 	public ChatHackClient(InetSocketAddress server, String login, String password) throws IOException {
-		/* Peut-être factoriser ce bloc dans une méthode initConnexion() ? Puis la placer dans launch() ? */
+		this.server = Objects.requireNonNull(server);
 		this.sc = SocketChannel.open();
-		this.sc.connect(Objects.requireNonNull(server));
 		this.selector = Selector.open();
-		this.key = sc.register(selector, SelectionKey.OP_WRITE); // Plutot le mettre en OP_READ ? Car on envois manuellement la trame de demande de connexion puis on ATTEND la réponse du serveur
 		
 		this.login = Objects.requireNonNull(login);
 		this.password = Objects.requireNonNull(password);
@@ -64,18 +64,37 @@ public class ChatHackClient {
 			throw new IllegalStateException("Client is already running");
 		}
 		try {
-			// Envoyer la trame de demande de connexion ici
+			init();
 			mainThread.start();
 		} catch (UncheckedIOException tunneled) {
+			// C'est ici qu'on pourrait éventuellement essayer de relancer la connexion au lieu de propager l'exception
 			throw tunneled.getCause();
 		}
 	}
 	
 	/**
 	 * Stop the client thread.
+	 * It does not reset client parameters (buffers, queue and frame reader)
+	 * 
 	 */
 	public void stop() {
 		mainThread.interrupt();
+	}
+	
+	/**
+	 * Reset client parameters (buffers, queue and frame reader) and init connexion with server
+	 * 
+	 * @throws IOException
+	 */
+	private void init() throws IOException {
+		bbin.clear();
+		bbout.clear();
+		queue.clear();
+		freader.reset();
+		
+		sc.configureBlocking(false);
+		sc.connect(Objects.requireNonNull(server));
+		key = sc.register(selector, SelectionKey.OP_CONNECT);
 	}
 	
 	private void run() {
@@ -90,6 +109,9 @@ public class ChatHackClient {
 	
 	private void treatKey(SelectionKey key) {
 		try {
+			if (key.isValid() && key.isConnectable()) {
+				doConnect();
+			}
 			if (key.isValid() && key.isWritable()) {
 				doWrite();
 			}
@@ -101,8 +123,8 @@ public class ChatHackClient {
 			silentlyClose();
 		}
 	}
-	
-    /**
+
+	/**
      * Update the interestOps of the key looking
      * only at values of the boolean closed and
      * of both ByteBuffers.
@@ -129,6 +151,22 @@ public class ChatHackClient {
             key.interestOps(newInterestOps);
         }
     }
+    
+    /**
+     * Finishes the process of connexion with server if possible.
+     * Then send the connexion request with login/password
+     * 
+     * @throws IOException
+     */
+    private void doConnect() throws IOException {
+    	if ( !sc.finishConnect() ) {
+    		return;
+    	}
+    	
+    	// Envoyer la trame de demande de connexion ici
+    	// queueMessage(new InitConnexionFrame(login, password));
+    	updateInterestOps();
+	}
 	
     /**
      * Process the content of bbin
