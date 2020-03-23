@@ -38,10 +38,10 @@ public class FrameReader implements Reader {
 		this.publicMessageReader = publicMessageReader;
 		this.privateRequestReader = privateRequestReader;
 		this.privateAnswerReader = privateAnswerReader;
-		map.put((byte) 0, () -> test(connectionAnswerReader));
-		map.put((byte) 1, () -> test(publicMessageReader));
-		map.put((byte) 2, () -> test(privateRequestReader));
-		map.put((byte) 3, () -> test(privateAnswerReader));
+		map.put((byte) 0, () -> processReader(connectionAnswerReader));
+		map.put((byte) 1, () -> processReader(publicMessageReader));
+		map.put((byte) 2, () -> processReader(privateRequestReader));
+		map.put((byte) 3, () -> processReader(privateAnswerReader));
 		
 	}
 
@@ -159,13 +159,12 @@ public class FrameReader implements Reader {
 		case 4: // TODO Call apropriate function of coresponding reader
 			System.out.println(4);
 			break;
-		default:
-			throw new IllegalStateException("Non valid Op_Code");
+		
 		}
 	}
 	
 	
-	private ProcessStatus test(Reader reader) {
+	private ProcessStatus processReader(Reader reader) {
 		var status = reader.process();
 		if (status != ProcessStatus.DONE) {
 			bb.compact();
