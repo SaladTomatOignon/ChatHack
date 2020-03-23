@@ -24,6 +24,7 @@ public class FrameReader implements Reader {
 	private PublicMessageReader publicMessageReader;
 	private PrivateRequestReader privateRequestReader;
 	private PrivateAnswerReader privateAnswerReader;
+	private InfoReader infoReader;
 	
 	
 	private final Map<Byte, Supplier<ProcessStatus>> map = new HashMap<Byte, Supplier<ProcessStatus>>();
@@ -32,7 +33,7 @@ public class FrameReader implements Reader {
 	
 	private FrameReader(ByteBuffer bb, ConnectionAnswerReader connectionAnswerReader,
 			PublicMessageReader publicMessageReader, PrivateRequestReader privateRequestReader,
-			PrivateAnswerReader privateAnswerReader) {
+			PrivateAnswerReader privateAnswerReader, InfoReader infoReader) {
 		this.bb = bb;
 		this.connectionAnswerReader = connectionAnswerReader;
 		this.publicMessageReader = publicMessageReader;
@@ -42,7 +43,7 @@ public class FrameReader implements Reader {
 		map.put((byte) 1, () -> processReader(publicMessageReader));
 		map.put((byte) 2, () -> processReader(privateRequestReader));
 		map.put((byte) 3, () -> processReader(privateAnswerReader));
-		
+		map.put((byte) 4, () -> processReader(infoReader));
 	}
 
 
@@ -50,8 +51,7 @@ public class FrameReader implements Reader {
 
 
 	public FrameReader(ByteBuffer bb) {
-		this(bb, new ConnectionAnswerReader(bb), new PublicMessageReader(bb), new PrivateRequestReader(bb),  new PrivateAnswerReader(bb));
-//		
+		this(bb, new ConnectionAnswerReader(bb), new PublicMessageReader(bb), new PrivateRequestReader(bb),  new PrivateAnswerReader(bb), new InfoReader(bb));
 	}
 
 
@@ -143,11 +143,15 @@ public class FrameReader implements Reader {
 
 	@Override
 	public void reset() {
-		bb.compact();
+		if (bb.position() != 0) {
+			bb.compact();
+		}
+		
 		state = State.WAITING_OPCODE;
 		switch (opCode) {
 		case 0:
 			connectionAnswerReader.reset();
+			break;
 		case 1:
 			publicMessageReader.reset();
 			break;
@@ -156,8 +160,9 @@ public class FrameReader implements Reader {
 			break;
 		case 3:
 			privateAnswerReader.reset();
-		case 4: // TODO Call apropriate function of coresponding reader
-			System.out.println(4);
+			break;
+		case 4: 
+			infoReader.reset();
 			break;
 		
 		}
