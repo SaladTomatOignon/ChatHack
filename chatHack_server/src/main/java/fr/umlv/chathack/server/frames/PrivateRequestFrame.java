@@ -3,6 +3,8 @@ package fr.umlv.chathack.server.frames;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+import fr.umlv.chathack.server.core.Context;
+
 public class PrivateRequestFrame implements Frame{
 
 	private String name;
@@ -15,7 +17,7 @@ public class PrivateRequestFrame implements Frame{
 
 
 	@Override
-	public void accept() {
+	public void accept(Context ctx) {
 		System.out.println(name);
 	}
 	

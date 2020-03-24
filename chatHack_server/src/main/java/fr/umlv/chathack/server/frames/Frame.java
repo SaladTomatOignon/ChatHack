@@ -1,5 +1,7 @@
 package fr.umlv.chathack.server.frames;
 
+import fr.umlv.chathack.server.core.Context;
+
 public interface Frame {
 	
 	/**
@@ -19,5 +21,5 @@ public interface Frame {
 	/**
 	 * Perform the frame action
 	 */
-	void accept();
+	void accept(Context ctx);
 }

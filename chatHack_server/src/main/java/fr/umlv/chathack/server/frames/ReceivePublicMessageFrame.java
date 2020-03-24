@@ -1,19 +1,23 @@
-package fr.umlv.chathack.client.frames;
+package fr.umlv.chathack.server.frames;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class SendPublicMessageFrame implements Frame {
+import fr.umlv.chathack.server.core.Context;
+
+public class ReceivePublicMessageFrame implements Frame {
 
 	private String message;
+	private String name;
 
-	public SendPublicMessageFrame(String message) {
+	public ReceivePublicMessageFrame(String name, String message) {
+		this.name = name;
 		this.message = message;
 	}
 
 	@Override
-	public void accept() {
-		System.out.println(message);
+	public void accept(Context ctx) {
+		System.out.println("name : " + name + ", message : " + message);
 	}
 
 	@Override
@@ -21,8 +25,12 @@ public class SendPublicMessageFrame implements Frame {
 		var cs = StandardCharsets.UTF_8;
 		var bb = ByteBuffer.allocate(1024);
 		var messageEncode = cs.encode(message);
+		var nameEncode = cs.encode(name);
 		bb.put((byte) 1);
 
+		bb.putInt(nameEncode.remaining());
+		bb.put(nameEncode);
+		
 		bb.putInt(messageEncode.remaining());
 		bb.put(messageEncode);
 

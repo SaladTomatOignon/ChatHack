@@ -1,26 +1,23 @@
-package fr.umlv.chathack.client.readers;
+package fr.umlv.chathack.server.readers;
 
 import java.nio.ByteBuffer;
 
-import fr.umlv.chathack.client.frames.PrivateAnswerFrame;
+import fr.umlv.chathack.server.frames.ConnectionAnswerFrame;
 
-
-public class PrivateAnswerReader implements Reader{
+public class ConnectionAnswerReader implements Reader{
 	private enum State {
-		DONE, WAITING_RESPONCE_CODE, WAITING_NAME, ERROR
+		DONE, WAITING_RESPONCE_CODE, ERROR
 	}
 
-	private String name;
 	private byte responceCode;
 
 	private final ByteBuffer bb;
 	private State state = State.WAITING_RESPONCE_CODE;
 
-	private StringReader strReader;
-
-	public PrivateAnswerReader(ByteBuffer bb) {
+	
+	
+	public ConnectionAnswerReader(ByteBuffer bb) {
 		this.bb = bb;
-		this.strReader = new StringReader(bb);
 	}
 
 	@Override
@@ -28,24 +25,14 @@ public class PrivateAnswerReader implements Reader{
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
-		ProcessStatus status;
 		switch (state) {
 		case WAITING_RESPONCE_CODE:
 			if (bb.remaining() >= Byte.BYTES) {
 				responceCode = bb.get();
-				state = State.WAITING_NAME;
-			}
-
-		case WAITING_NAME:
-			status = strReader.process();
-			if (status == ProcessStatus.DONE) {
-				name = (String) strReader.get();
 				state = State.DONE;
 				return ProcessStatus.DONE;
-				
-
-			} else {
-				return status;
+			}else {
+				return ProcessStatus.REFILL;
 			}
 
 		default:
@@ -59,13 +46,17 @@ public class PrivateAnswerReader implements Reader{
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		return new PrivateAnswerFrame(responceCode, name);
+		return new ConnectionAnswerFrame(responceCode);
 	}
 
 	@Override
 	public void reset() {
-		strReader.reset();
 		state = State.WAITING_RESPONCE_CODE;
+		
 	}
-
+	
+	
+	
+	
+	
 }

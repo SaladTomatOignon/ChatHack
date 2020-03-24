@@ -34,12 +34,12 @@ public class Main {
 			return;
 		}
 		
-		if ( !isPortValid(args[1]) ) {
+		if ( !isPortValid(args[0]) ) {
 			System.out.println("Port number must be between 1 and 65535 inclusiv");
 			return;
 		}
 		
-		int port = Integer.parseInt(args[1]);
+		int port = Integer.parseInt(args[0]);
 		ChatHackServer server = new ChatHackServer(port);
 		server.launch();
 	}

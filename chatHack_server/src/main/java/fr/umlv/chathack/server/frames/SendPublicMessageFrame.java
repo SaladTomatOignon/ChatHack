@@ -3,17 +3,19 @@ package fr.umlv.chathack.server.frames;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class PublicMessageFrame implements Frame {
+import fr.umlv.chathack.server.core.Context;
+
+public class SendPublicMessageFrame implements Frame {
 
 	private String message;
 
-	public PublicMessageFrame(String message) {
+	public SendPublicMessageFrame(String message) {
 		this.message = message;
 	}
 
 	@Override
-	public void accept() {
-		System.out.println(message);
+	public void accept(Context ctx) {
+		ctx.broadcast(new ReceivePublicMessageFrame(ctx.getLogin(), message));
 	}
 
 	@Override

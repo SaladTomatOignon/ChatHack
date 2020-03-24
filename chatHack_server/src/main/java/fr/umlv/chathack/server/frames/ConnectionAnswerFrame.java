@@ -1,6 +1,8 @@
-package fr.umlv.chathack.client.frames;
+package fr.umlv.chathack.server.frames;
 
 import java.nio.ByteBuffer;
+
+import fr.umlv.chathack.server.core.Context;
 
 public class ConnectionAnswerFrame implements Frame{
 
@@ -31,7 +33,7 @@ public class ConnectionAnswerFrame implements Frame{
 	}
 
 	@Override
-	public void accept() {
+	public void accept(Context ctx) {
 		switch ( responceCode ) {
 			case 0 : System.out.println("Connexion acceptée par le serveur"); break;
 			case 1 : System.out.println("Connexion refusée par le serveur : Identifiants invalides"); break;

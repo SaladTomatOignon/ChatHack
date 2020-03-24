@@ -14,6 +14,7 @@ import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.umlv.chathack.client.frames.ConnectionFrame;
 import fr.umlv.chathack.client.frames.Frame;
 import fr.umlv.chathack.client.readers.FrameReader;
 
@@ -100,7 +101,7 @@ public class ChatHackClient {
 	private void run() {
 		while ( !Thread.interrupted() ) {
 			try {
-				selector.select(this::treatKey);
+				selector.select(this::treatKey, 100);
 			} catch(IOException ioe) {
 				throw new UncheckedIOException(ioe);
 			}
@@ -144,7 +145,7 @@ public class ChatHackClient {
         if ( (bbout.position() > 0 || !queue.isEmpty()) && !closed ) {
         	newInterestOps |= SelectionKey.OP_WRITE;
         }
-            
+        
         if ( newInterestOps == 0 ) {
             silentlyClose();
         } else {
@@ -163,8 +164,7 @@ public class ChatHackClient {
     		return;
     	}
     	
-    	// Envoyer la trame de demande de connexion ici
-    	// queueMessage(new InitConnexionFrame(login, password));
+    	queueMessage(new ConnectionFrame(login, password, !password.isEmpty()));
     	updateInterestOps();
 	}
 	
@@ -214,9 +214,11 @@ public class ChatHackClient {
      *
      */
     private void processOut() {
-        while ( !queue.isEmpty() && bbout.remaining() >= queue.element().size() ) {
-            bbout.put(queue.remove().getBytes());
-        }
+    	synchronized (server) {
+            while ( !queue.isEmpty() && bbout.remaining() >= queue.element().size() ) {
+                bbout.put(queue.remove().getBytes());
+            }
+    	}
     }
     
     /**
@@ -243,7 +245,9 @@ public class ChatHackClient {
      * @param frame The frame to add
      */
     public void queueMessage(Frame frame) {
-        queue.add(frame);
+    	synchronized (server) {
+    		queue.add(frame);
+    	}
         
         processOut();
         updateInterestOps();
@@ -257,4 +261,5 @@ public class ChatHackClient {
         	logger.log(Level.SEVERE, "Error while closing connexion with server", e);
         }
     }
+
 }

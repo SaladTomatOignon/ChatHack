@@ -2,7 +2,7 @@ package fr.umlv.chathack.server.readers;
 
 import java.nio.ByteBuffer;
 
-import fr.umlv.chathack.server.frames.PublicMessageFrame;
+import fr.umlv.chathack.server.frames.SendPublicMessageFrame;
 
 
 
@@ -57,7 +57,7 @@ public class PublicMessageReader implements Reader{
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		return new PublicMessageFrame(message);
+		return new SendPublicMessageFrame(message);
 	}
 
 	@Override

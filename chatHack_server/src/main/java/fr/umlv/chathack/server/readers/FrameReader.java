@@ -127,7 +127,9 @@ public class FrameReader implements Reader{
 	@Override
 	public void reset() {
 		state = State.WAITING_OPCODE;
-		bb.compact();
+		if (bb.position() != 0) {
+            bb.compact();
+        }
 		switch (opCode) {
 		case 0:
 			connectionReader.reset();

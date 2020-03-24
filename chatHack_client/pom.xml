@@ -16,4 +16,23 @@
 		<maven.compiler.target>13</maven.compiler.target>
 	</properties>
 
+	<build>
+		<plugins>
+			<!-- Création du JAR -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>fr.umlv.chathack.client.main.Main</mainClass>
+							<addClasspath>true</addClasspath>
+							<classpathPrefix></classpathPrefix>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
 </project>

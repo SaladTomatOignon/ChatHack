@@ -3,6 +3,8 @@ package fr.umlv.chathack.server.frames;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+import fr.umlv.chathack.server.core.Context;
+
 public class ConnectionFrame implements Frame {
 	private String name;
 	private String pass;
@@ -19,8 +21,9 @@ public class ConnectionFrame implements Frame {
 	}
 
 	@Override
-	public void accept() {
-		System.out.println("name : " + name + ", pass : " + pass + " passNeed : " + passNeed);
+	public void accept(Context ctx) {
+		byte connectionStatus = passNeed ? ctx.tryLogin(name, pass) : ctx.tryLogin(name);
+		ctx.queueMessage(new ConnectionAnswerFrame(connectionStatus));
 	}
 
 	@Override

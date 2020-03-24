@@ -26,6 +26,7 @@ public class Context {
     
     private boolean closed;
     private boolean logged; // If the client is logged to the server
+    private String login;
 	
     public Context(ChatHackServer server, SelectionKey key) {
         this.key = key;
@@ -39,18 +40,6 @@ public class Context {
         
         this.closed = false;
         this.logged = false;
-    }
-    
-    /**
-     * Add a message to the message queue, tries to fill bbOut and updateInterestOps
-     *
-     * @param frame The frame to add
-     */
-    public void queueMessage(Frame frame) {
-        queue.add(frame);
-        
-        processOut();
-        updateInterestOps();
     }
     
     /**
@@ -102,7 +91,7 @@ public class Context {
     			Frame frame = (Frame) freader.get();
     			freader.reset();
     			
-    			frame.accept();
+    			frame.accept(this);
     			break;
     		case REFILL :
     			break;
@@ -135,9 +124,11 @@ public class Context {
      *
      */
     private void processOut() {
-        while ( !queue.isEmpty() && bbout.remaining() >= queue.element().size() ) {
-            bbout.put(queue.remove().getBytes());
-        }
+    	synchronized ( server ) {
+            while ( !queue.isEmpty() && bbout.remaining() >= queue.element().size() ) {
+                bbout.put(queue.remove().getBytes());
+            }
+    	}
     }
     
     /**
@@ -155,5 +146,77 @@ public class Context {
         
         processOut();
         updateInterestOps();
+    }
+    
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////						METHODES D'INTERACTION AVEC LE SERVEUR						/////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * Add a message to the message queue, tries to fill bbOut and updateInterestOps
+     *
+     * @param frame The frame to add
+     */
+    public void queueMessage(Frame frame) {
+    	synchronized ( server ) {
+    		queue.add(frame);
+    	}
+        
+        processOut();
+        updateInterestOps();
+    }
+    
+    /**
+     * Broadcast the frame to the server
+     * 
+     * @param frame The frame to broadcast
+     */
+    public void broadcast(Frame frame) {
+    	server.broadcast(frame);
+    }
+    
+    /**
+     * Get the client login.
+     * 
+     * @return The client login
+     */
+    public String getLogin() {
+    	return login;
+    }
+    
+    /**
+     * Try to login the client to server.
+     * 
+     * @param login
+     * @param password
+     * @return 0 if connection succeed, 1 if logins are wrong, 2 if login is already in used
+     */
+    public byte tryLogin(String login, String password) {
+    	byte reponseCode = server.tryLogin(login, password);
+    	
+    	if ( reponseCode == 0 ) {
+        	logged = true;
+        	this.login = login;
+    	}
+    	
+    	return reponseCode;
+    }
+    
+    /**
+     * Try to login the client to server.
+     * 
+     * @param login
+     * @return 0 if connection succeed, 1 if logins are wrong, 2 if login is already in used
+     */
+    public byte tryLogin(String login) {
+    	return tryLogin(login, "");
+    }
+    
+    /**
+     * 
+     * @return True if the client is logged to the server
+     */
+    public boolean isLogged() {
+    	return logged;
     }
 }

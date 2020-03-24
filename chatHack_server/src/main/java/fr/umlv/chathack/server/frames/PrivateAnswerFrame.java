@@ -3,6 +3,8 @@ package fr.umlv.chathack.server.frames;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+import fr.umlv.chathack.server.core.Context;
+
 public class PrivateAnswerFrame implements Frame {
 	private boolean connectionAccept;
 	private String name;
@@ -18,7 +20,7 @@ public class PrivateAnswerFrame implements Frame {
 
 
 
-	public void accept() {
+	public void accept(Context ctx) {
 		System.out.println("connectionAccept : " + connectionAccept + " name : " + name);
 	}
 	

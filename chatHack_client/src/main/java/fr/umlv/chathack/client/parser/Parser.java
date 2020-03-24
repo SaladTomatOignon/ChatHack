@@ -1,6 +1,7 @@
 package fr.umlv.chathack.client.parser;
 
 import fr.umlv.chathack.client.frames.Frame;
+import fr.umlv.chathack.client.frames.SendPublicMessageFrame;
 
 public class Parser {
 	
@@ -15,8 +16,7 @@ public class Parser {
 		if ( line.startsWith("/") || line.startsWith("@") ) {
 			throw new UnsupportedOperationException(); // TODO
 		} else {
-			// return new PublicMessage(line);
-			return null;
+			return new SendPublicMessageFrame(line);
 		}
 	}
 }
