@@ -3,9 +3,9 @@ package fr.umlv.chathack.client.core;
 import java.util.Objects;
 import java.util.Scanner;
 
-import fr.umlv.chathack.client.frames.Frame;
 import fr.umlv.chathack.client.parser.MalFormedFrameException;
 import fr.umlv.chathack.client.parser.Parser;
+import fr.umlv.chathack.resources.frames.Frame;
 
 public class UserInput {
 	private final ChatHackClient client;
@@ -27,7 +27,7 @@ public class UserInput {
 					continue;
 				}
 				
-				client.queueMessage(frame);
+				client.queueMessageToPublicServer(frame);
 			}
 		}
 	}

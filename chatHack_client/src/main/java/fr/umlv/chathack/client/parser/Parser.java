@@ -1,7 +1,7 @@
 package fr.umlv.chathack.client.parser;
 
-import fr.umlv.chathack.client.frames.Frame;
-import fr.umlv.chathack.client.frames.SendPublicMessageFrame;
+import fr.umlv.chathack.resources.frames.Frame;
+import fr.umlv.chathack.resources.frames.SendPublicMessageFrame;
 
 public class Parser {
 	
