@@ -24,6 +24,7 @@ public class ServerContext {
     final private Queue<Frame> queue;
     final private FrameReader freader;
     
+    private String login;
     private boolean closed;
 	
     public ServerContext(SelectionKey key, Server server) {
@@ -36,6 +37,7 @@ public class ServerContext {
         this.queue = new LinkedList<>();
         this.freader = new FrameReader(bbin);
         
+        this.login = null;
         this.closed = false;
     }
     
@@ -196,5 +198,14 @@ public class ServerContext {
     	
     	server.authenticateClient(login);
     	return 0;
+    }
+    
+    /**
+     * Retrieve the client login.
+     * 
+     * @return The client login.
+     */
+    public String getLogin() {
+    	return login;
     }
 }

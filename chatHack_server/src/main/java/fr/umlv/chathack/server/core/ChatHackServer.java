@@ -90,6 +90,10 @@ public class ChatHackServer implements Server {
      */
     private void silentlyClose(SelectionKey key) {
         Channel sc = (Channel) key.channel();
+        ServerContext ctx = (ServerContext) key.attachment();
+        
+        authenticatedClients.remove(ctx.getLogin());
+        
         try {
             sc.close();
         } catch (IOException e) {
