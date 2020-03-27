@@ -8,13 +8,16 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.umlv.chathack.contexts.ClientContext;
 import fr.umlv.chathack.resources.frames.ConnectionFrame;
-import fr.umlv.chathack.resources.frames.Frame;
+import fr.umlv.chathack.resources.frames.PrivateRequestFrame;
+import fr.umlv.chathack.resources.frames.SendPublicMessageFrame;
 
 public class ChatHackClient {
 	static final private Logger logger = Logger.getLogger(ChatHackClient.class.getName());
@@ -23,7 +26,9 @@ public class ChatHackClient {
 	private final InetSocketAddress publicServer;
 	private final Selector selector;
 	private SelectionKey publicServerChannelKey;
+	
 	private ServerSocketChannel privateServerSocketChannel;
+	private final Map<String, ClientId> privateClients;
 	
 	private final String login;
 	private final String password;
@@ -38,7 +43,9 @@ public class ChatHackClient {
 		this.publicServer = Objects.requireNonNull(server);
 		this.selector = Selector.open();
 		this.publicServerChannelKey = null;
+		
 		this.privateServerSocketChannel = null;
+		this.privateClients = new HashMap<>();
 		
 		this.login = Objects.requireNonNull(login);
 		this.password = Objects.requireNonNull(password);
@@ -183,12 +190,45 @@ public class ChatHackClient {
     }
 
     /**
-     * Add the frame to the public server queue.
+     * Add a string message to the public server's queue.
      * 
-     * @param frame The frame to send
+     * @param msg The message to send.
      */
-    public void queueMessageToPublicServer(Frame frame) {
+    public void sendPublicMessage(String msg) {
     	ClientContext ctx = (ClientContext) publicServerChannelKey.attachment();
-    	ctx.queueMessage(frame);
+    	
+    	ctx.queueMessage(new SendPublicMessageFrame(msg));
+    }
+    
+    /**
+     * Add a string message to the private client's queue.
+     * If the login does not correspond to an existing private client,
+     * send a request to the server to create a new communication with this potential client.
+     * 
+     * @param msg The message to send.
+     * @param login The login of the recipient client.
+     */
+    public void sendPrivateMessage(String msg, String login) {
+    	if ( privateClients.containsKey(login) ) {
+    		ClientId client = privateClients.get(login);
+    		ClientContext ctx = (ClientContext) client.key.attachment();
+    		
+//    		ctx.queueMessage(new PrivateMessageFrame(client.id, msg));
+    	} else {
+    		ClientContext ctx = (ClientContext) publicServerChannelKey.attachment();
+    		
+    		ctx.queueMessage(new PrivateRequestFrame(login));
+    		// TODO : Faire la demande de connexion (ne pas oublier d'envoyer la frame après)
+    	}
+    }
+    
+    private class ClientId {
+    	private final int id;
+    	private final SelectionKey key;
+    	
+    	private ClientId(SelectionKey key, int id) {
+    		this.key = Objects.requireNonNull(key);
+    		this.id = id;
+    	}
     }
 }

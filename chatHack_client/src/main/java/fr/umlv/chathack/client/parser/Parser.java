@@ -1,22 +1,33 @@
 package fr.umlv.chathack.client.parser;
 
-import fr.umlv.chathack.resources.frames.Frame;
-import fr.umlv.chathack.resources.frames.SendPublicMessageFrame;
+import fr.umlv.chathack.client.core.ChatHackClient;
 
 public class Parser {
 	
 	/**
-	 * Parse the string line in parameter to get the corresponding frame to send.
+	 * Parse the string line in parameter and performs the action
+	 * according to the syntax.
 	 * 
-	 * @param line The line to parse
-	 * @return The frame corresponding to the line
-	 * @throws MalFormedFrameException If the line is syntaxically incorrect
+	 * @param client The client to take the action.
+	 * @param line The line to parse.
+	 * 
+	 * @throws MalFormedFrameException If the line is syntactically incorrect.
 	 */
-	static public Frame parse(String line) throws MalFormedFrameException {
-		if ( line.startsWith("/") || line.startsWith("@") ) {
-			throw new UnsupportedOperationException(); // TODO
-		} else {
-			return new SendPublicMessageFrame(line);
+	static public void parse(ChatHackClient client, String line) throws MalFormedFrameException {
+		try {
+			if ( line.startsWith("/") ) {
+				String[] sequences = line.split(" ", 2);
+				String recipientClient = sequences[0].substring(1);
+				String msg = sequences[1];
+				
+				client.sendPrivateMessage(msg, recipientClient);
+			} else if ( line.startsWith("@") ) {
+				throw new UnsupportedOperationException(); // TODO
+			} else {
+				client.sendPublicMessage(line);
+			}
+		} catch (Exception e) {
+			throw new MalFormedFrameException();
 		}
 	}
 }

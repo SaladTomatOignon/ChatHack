@@ -5,7 +5,6 @@ import java.util.Scanner;
 
 import fr.umlv.chathack.client.parser.MalFormedFrameException;
 import fr.umlv.chathack.client.parser.Parser;
-import fr.umlv.chathack.resources.frames.Frame;
 
 public class UserInput {
 	private final ChatHackClient client;
@@ -18,16 +17,13 @@ public class UserInput {
 		try (Scanner scanner = new Scanner(System.in)) {
 			while ( scanner.hasNextLine() ) {
 				String line = scanner.nextLine();
-				Frame frame = null;
 				
 				try {
-					frame = Parser.parse(line);
+					Parser.parse(client, line);
 				} catch (MalFormedFrameException e) {
 					System.out.println("Invalid syntax");
 					continue;
 				}
-				
-				client.queueMessageToPublicServer(frame);
 			}
 		}
 	}
