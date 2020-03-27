@@ -8,24 +8,34 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.umlv.chathack.contexts.Server;
 import fr.umlv.chathack.contexts.ServerContext;
+import fr.umlv.chathack.server.database.DataBase;
 
-public class ChatHackServer {
+public class ChatHackServer implements Server {
 	static private Logger logger = Logger.getLogger(ChatHackServer.class.getName());
 	static final int BUFFER_SIZE = 1024;
 	
     private final ServerSocketChannel serverSocketChannel;
     private final Selector selector;
+    
+    private final DataBase dataBase;
+    private final Set<String> authenticatedClients;
 	
 	public ChatHackServer(int port) throws IOException {
-        serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.bind(new InetSocketAddress(port));
-        serverSocketChannel.configureBlocking(false);
-        selector = Selector.open();
+        this.serverSocketChannel = ServerSocketChannel.open();
+        this.serverSocketChannel.bind(new InetSocketAddress(port));
+        this.serverSocketChannel.configureBlocking(false);
+        this.selector = Selector.open();
+        
+        this.dataBase = DataBase.connect();
+        this.authenticatedClients = new HashSet<>();
 	}
 	
     public void launch() throws IOException {
@@ -71,7 +81,7 @@ public class ChatHackServer {
         
         sc.configureBlocking(false);
         SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
-        clientKey.attach(new ServerContext(clientKey));
+        clientKey.attach(new ServerContext(clientKey, this));
     }
 	
     /**
@@ -85,5 +95,20 @@ public class ChatHackServer {
         } catch (IOException e) {
         	logger.log(Level.SEVERE, "Error while closing connexion with client", e);
         }
+    }
+    
+    @Override
+    public boolean isRegistered(String login, String password) {
+    	return dataBase.isRegistered(login, password);
+    }
+    
+    @Override
+    public void authenticateClient(String login) {
+    	authenticatedClients.add(login);
+    }
+    
+    @Override
+    public boolean clientAuthenticated(String login) {
+    	return authenticatedClients.contains(login);
     }
 }

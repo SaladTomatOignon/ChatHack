@@ -17,6 +17,7 @@ public class ServerContext {
 	
     final private SelectionKey key;
     final private SocketChannel sc;
+    final private Server server;
     
     final private ByteBuffer bbin;
     final private ByteBuffer bbout;
@@ -25,9 +26,10 @@ public class ServerContext {
     
     private boolean closed;
 	
-    public ServerContext(SelectionKey key) {
+    public ServerContext(SelectionKey key, Server server) {
         this.key = key;
         this.sc = (SocketChannel) key.channel();
+        this.server = server;
         
         this.bbin = ByteBuffer.allocate(Server.BUFFER_SIZE);
         this.bbout = ByteBuffer.allocate(Server.BUFFER_SIZE);
@@ -149,9 +151,9 @@ public class ServerContext {
     }
     
     /**
-     * Add a message to the message queue, tries to fill bbOut and updateInterestOps
+     * Add a message to the message queue, tries to fill bbOut and updateInterestOps.
      *
-     * @param frame The frame to add
+     * @param frame The frame to add.
      */
     public void queueMessage(Frame frame) {
     	System.out.println("Dans queue message, on ajoute " + frame);
@@ -161,5 +163,38 @@ public class ServerContext {
         
         processOut();
         updateInterestOps();
+    }
+    
+    /**
+     * Try to login the client to the server.
+     * It succeed if the logins are registered by the server.
+     * 
+     * @param login
+     * @param password
+     * @return 0 if login succeed or 1 if it failed.
+     */
+    public byte tryLogin(String login, String password) {
+    	if ( !server.isRegistered(login, password) ) {
+    		return 1;
+    	}
+    	
+    	server.authenticateClient(login);
+    	return 0;
+    }
+    
+    /**
+     * Try to login the client to the server.
+     * It succeed if the given login is not already authenticated by the server.
+     * 
+     * @param login
+     * @return 0 if login succeed or 2 if it failed.
+     */
+    public byte tryLogin(String login) {
+    	if ( server.clientAuthenticated(login) ) {
+    		return 2;
+    	}
+    	
+    	server.authenticateClient(login);
+    	return 0;
     }
 }

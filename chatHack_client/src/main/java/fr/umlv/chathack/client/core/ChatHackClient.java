@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Objects;
 import java.util.logging.Level;
@@ -16,12 +17,13 @@ import fr.umlv.chathack.resources.frames.ConnectionFrame;
 import fr.umlv.chathack.resources.frames.Frame;
 
 public class ChatHackClient {
-	static private Logger logger = Logger.getLogger(ChatHackClient.class.getName());
-	static final int BUFFER_SIZE = 1024;
+	static final private Logger logger = Logger.getLogger(ChatHackClient.class.getName());
+	static final private int PRIVATE_SERVER_PORT = 7777;
 	
-	private final InetSocketAddress server;
+	private final InetSocketAddress publicServer;
 	private final Selector selector;
-	private SelectionKey serverChannelKey;
+	private SelectionKey publicServerChannelKey;
+	private ServerSocketChannel privateServerSocketChannel;
 	
 	private final String login;
 	private final String password;
@@ -33,8 +35,10 @@ public class ChatHackClient {
 	}
 	
 	public ChatHackClient(InetSocketAddress server, String login, String password) throws IOException {
-		this.server = Objects.requireNonNull(server);
+		this.publicServer = Objects.requireNonNull(server);
 		this.selector = Selector.open();
+		this.publicServerChannelKey = null;
+		this.privateServerSocketChannel = null;
 		
 		this.login = Objects.requireNonNull(login);
 		this.password = Objects.requireNonNull(password);
@@ -72,10 +76,10 @@ public class ChatHackClient {
 	private void init() throws IOException {
 		SocketChannel sc = SocketChannel.open();
 		sc.configureBlocking(false);
-		sc.connect(Objects.requireNonNull(server));
+		sc.connect(Objects.requireNonNull(publicServer));
 		
-		serverChannelKey = sc.register(selector, SelectionKey.OP_CONNECT);
-		serverChannelKey.attach(new ClientContext(serverChannelKey));
+		publicServerChannelKey = sc.register(selector, SelectionKey.OP_CONNECT);
+		publicServerChannelKey.attach(new ClientContext(publicServerChannelKey));
 	}
 	
 	private void run() {
@@ -92,6 +96,9 @@ public class ChatHackClient {
 		try {
 			if (key.isValid() && key.isConnectable()) {
 				doConnect(key);
+			}
+			if (key.isValid() && key.isAcceptable()) {
+				doAccept(key);
 			}
 		} catch (IOException ioe) {
 			throw new UncheckedIOException(ioe);
@@ -112,7 +119,7 @@ public class ChatHackClient {
     
     /**
      * Finishes the process of connection with server if possible.
-     * Then send the connection request with login/password
+     * Then send the connection request with login/password.
      * @param key The channel server key
      * 
      * @throws IOException
@@ -127,6 +134,24 @@ public class ChatHackClient {
     	
     	ctx.queueMessage(new ConnectionFrame(login, password, !password.isEmpty()));
 	}
+    
+    /**
+     * Accept the client to the private server, and assign him his clientContext.
+     * 
+     * @param key The key associated to the client
+     * @throws IOException
+     */
+    private void doAccept(SelectionKey key) throws IOException {
+        SocketChannel sc = privateServerSocketChannel.accept();
+        
+        if ( Objects.isNull(sc) ) {
+        	return;
+        }
+        
+        sc.configureBlocking(false);
+        SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
+        clientKey.attach(new ClientContext(clientKey));
+    }
 	
     /**
      * Close the connection with the socketChannel.
@@ -140,14 +165,30 @@ public class ChatHackClient {
         	logger.log(Level.SEVERE, "Error while closing connexion with server", e);
         }
     }
+    
+    /**
+     * Create the private server and register it to the selector.
+     * 
+     * @throws IOException
+     */
+    private void createPrivateServer() throws IOException {
+    	if ( !Objects.isNull(privateServerSocketChannel) ) {
+    		throw new IllegalStateException("Private server already instanciated");
+    	}
+    	
+    	privateServerSocketChannel = ServerSocketChannel.open();
+    	privateServerSocketChannel.bind(new InetSocketAddress(PRIVATE_SERVER_PORT));
+    	privateServerSocketChannel.configureBlocking(false);
+    	privateServerSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+    }
 
     /**
-     * Add the frame to the public server queue
+     * Add the frame to the public server queue.
      * 
      * @param frame The frame to send
      */
     public void queueMessageToPublicServer(Frame frame) {
-    	ClientContext ctx = (ClientContext) serverChannelKey.attachment();
+    	ClientContext ctx = (ClientContext) publicServerChannelKey.attachment();
     	ctx.queueMessage(frame);
     }
 }

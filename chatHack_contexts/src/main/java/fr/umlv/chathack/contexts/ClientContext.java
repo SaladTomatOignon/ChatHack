@@ -12,7 +12,6 @@ import java.util.logging.Logger;
 import fr.umlv.chathack.resources.frames.Frame;
 import fr.umlv.chathack.resources.readers.FrameReader;
 
-
 public class ClientContext {
 	static private final Logger logger = Logger.getLogger(ClientContext.class.getName());
 	
