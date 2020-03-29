@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 import fr.umlv.chathack.contexts.ClientContext;
 import fr.umlv.chathack.resources.frames.ConnectionFrame;
 import fr.umlv.chathack.resources.frames.PrivateRequestFrame;
-import fr.umlv.chathack.resources.frames.SendPublicMessageFrame;
+import fr.umlv.chathack.resources.frames.PublicMessageFromCliFrame;
 
 public class ChatHackClient {
 	static final private Logger logger = Logger.getLogger(ChatHackClient.class.getName());
@@ -197,7 +197,7 @@ public class ChatHackClient {
     public void sendPublicMessage(String msg) {
     	ClientContext ctx = (ClientContext) publicServerChannelKey.attachment();
     	
-    	ctx.queueMessage(new SendPublicMessageFrame(msg));
+    	ctx.queueMessage(new PublicMessageFromCliFrame(msg));
     }
     
     /**

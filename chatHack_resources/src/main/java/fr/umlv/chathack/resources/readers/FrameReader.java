@@ -21,10 +21,20 @@ public class FrameReader implements Reader {
 	private Frame frame;
 
 	private ConnectionAnswerReader connectionAnswerReader;
-	private PublicMessageReader publicMessageReader;
+	private PublicMessageFromServReader publicMessageFromServReader;
 	private PrivateRequestReader privateRequestReader;
-	private PrivateAnswerReader privateAnswerReader;
+//	private PrivateAnswerFromCliReader privateAnswerFromCliReader;
 	private InfoReader infoReader;
+	
+
+	private ConnectionReader connectionReader;
+	private PublicMessageFromCliReader publicMessageFromCliReader;
+//	private PrivateRequestReader privateRequestReader;
+	private PrivateAnswerFromCliReader privateAnswerFromCliReader;
+	private PrivateMessageReader privateMessageReader;
+	private InitSendFileReader initSendFileReader;
+	private DlFileReader dlFileReader;
+	
 	
 	
 	private final Map<Byte, Supplier<ProcessStatus>> map = new HashMap<Byte, Supplier<ProcessStatus>>();
@@ -32,18 +42,13 @@ public class FrameReader implements Reader {
 	
 	
 	private FrameReader(ByteBuffer bb, ConnectionAnswerReader connectionAnswerReader,
-			PublicMessageReader publicMessageReader, PrivateRequestReader privateRequestReader,
-			PrivateAnswerReader privateAnswerReader, InfoReader infoReader) {
+			PublicMessageFromServReader publicMessageFromServReader, PrivateRequestReader privateRequestReader,
+			PrivateAnswerFromCliReader privateAnswerFromCliReader, InfoReader infoReader) {
 		this.bb = bb;
 		this.connectionAnswerReader = connectionAnswerReader;
-		this.publicMessageReader = publicMessageReader;
+		this.publicMessageFromServReader = publicMessageFromServReader;
 		this.privateRequestReader = privateRequestReader;
-		this.privateAnswerReader = privateAnswerReader;
-		map.put((byte) 0, () -> processReader(connectionAnswerReader));
-		map.put((byte) 1, () -> processReader(publicMessageReader));
-		map.put((byte) 2, () -> processReader(privateRequestReader));
-		map.put((byte) 3, () -> processReader(privateAnswerReader));
-		map.put((byte) 4, () -> processReader(infoReader));
+		this.privateAnswerFromCliReader = privateAnswerFromCliReader;
 	}
 
 
@@ -51,7 +56,7 @@ public class FrameReader implements Reader {
 
 
 	public FrameReader(ByteBuffer bb) {
-		this(bb, new ConnectionAnswerReader(bb), new PublicMessageReader(bb), new PrivateRequestReader(bb),  new PrivateAnswerReader(bb), new InfoReader(bb));
+		this(bb, new ConnectionAnswerReader(bb), new PublicMessageFromServReader(bb), new PrivateRequestReader(bb),  new PrivateAnswerFromCliReader(bb), new InfoReader(bb));
 	}
 
 
@@ -153,13 +158,13 @@ public class FrameReader implements Reader {
 			connectionAnswerReader.reset();
 			break;
 		case 1:
-			publicMessageReader.reset();
+			publicMessageFromServReader.reset();
 			break;
 		case 2: 
 			privateRequestReader.reset();
 			break;
 		case 3:
-			privateAnswerReader.reset();
+			privateAnswerFromCliReader.reset();
 			break;
 		case 4: 
 			infoReader.reset();
