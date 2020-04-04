@@ -19,7 +19,7 @@ public class ConnectionFrame implements Frame {
 	}
 
 	@Override
-	public void accept() {
+	public void accept(ServerVisitor server) {
 		System.out.println("name : " + name + ", pass : " + pass + " passNeed : " + passNeed);
 	}
 

@@ -12,7 +12,7 @@ public class SendPublicMessageFrame implements Frame {
 	}
 
 	@Override
-	public void accept() {
+	public void accept(ClientVisitor client) {
 		System.out.println(message);
 	}
 

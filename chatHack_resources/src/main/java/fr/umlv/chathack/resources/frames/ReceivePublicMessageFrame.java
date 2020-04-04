@@ -14,7 +14,7 @@ public class ReceivePublicMessageFrame implements Frame {
 	}
 
 	@Override
-	public void accept() {
+	public void accept(ServerVisitor server) {
 		System.out.println("name : " + name + ", message : " + message);
 	}
 
