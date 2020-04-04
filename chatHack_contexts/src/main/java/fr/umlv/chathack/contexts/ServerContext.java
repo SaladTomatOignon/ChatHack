@@ -10,10 +10,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.umlv.chathack.resources.frames.Frame;
-import fr.umlv.chathack.resources.frames.ServerVisitor;
 import fr.umlv.chathack.resources.readers.FrameReader;
 
-public class ServerContext implements ServerVisitor {
+public class ServerContext {
 	static private final Logger logger = Logger.getLogger(ServerContext.class.getName());
 	
     final private SelectionKey key;
@@ -95,7 +94,8 @@ public class ServerContext implements ServerVisitor {
     			Frame frame = (Frame) freader.get();
     			freader.reset();
     			
-    			frame.accept(this);
+    			System.out.println("Frame recu : " + frame);
+    			frame.accept();
     			break;
     		case REFILL :
     			break;

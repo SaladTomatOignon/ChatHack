@@ -87,9 +87,6 @@ public class ChatHackServer implements Server {
     /**
      * Close the connection with the socketChannel.
      * It does not throw exception if an I/O error occurs.
-     * 
-     * Remove the client associated to the key from the authenticated list.
-     * 
      */
     private void silentlyClose(SelectionKey key) {
         Channel sc = (Channel) key.channel();

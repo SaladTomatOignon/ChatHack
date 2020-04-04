@@ -15,7 +15,7 @@ public class PrivateRequestFrame implements Frame{
 
 
 	@Override
-	public void accept(ServerVisitor server) {
+	public void accept() {
 		System.out.println(name);
 	}
 	

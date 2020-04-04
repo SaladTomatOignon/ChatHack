@@ -5,16 +5,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
-import java.util.Objects;
 import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import fr.umlv.chathack.resources.frames.ClientVisitor;
 import fr.umlv.chathack.resources.frames.Frame;
 import fr.umlv.chathack.resources.readers.FrameReader;
 
-public class ClientContext implements ClientVisitor {
+public class ClientContext {
 	static private final Logger logger = Logger.getLogger(ClientContext.class.getName());
 	
     final private SelectionKey key;
@@ -26,8 +24,6 @@ public class ClientContext implements ClientVisitor {
     final private FrameReader freader;
     
     private boolean closed;
-    private String login; // The client login, may be null.
-    private int tokenID; // The ID used to communicate the client, -1 if not assigned.
 	
     public ClientContext(SelectionKey key) {
         this.key = key;
@@ -39,8 +35,6 @@ public class ClientContext implements ClientVisitor {
         this.freader = new FrameReader(bbin);
         
         this.closed = false;
-        this.login = null;
-        this.tokenID = -1;
     }
     
     /**
@@ -96,7 +90,8 @@ public class ClientContext implements ClientVisitor {
     			Frame frame = (Frame) freader.get();
     			freader.reset();
     			
-    			frame.accept(this);
+    			System.out.println("Frame recu : " + frame);
+    			frame.accept();
     			break;
     		case REFILL :
     			break;
@@ -159,31 +154,12 @@ public class ClientContext implements ClientVisitor {
      * @param frame The frame to add
      */
     public void queueMessage(Frame frame) {
+    	System.out.println("Dans la queue, le client envoie : " + frame);
     	synchronized ( logger ) {
     		queue.add(frame);
     	}
         
         processOut();
         updateInterestOps();
-    }
-    
-    public void setLogin(String login) {
-    	this.login = Objects.requireNonNull(login);
-    }
-    
-    public String getLogin() {
-    	return login;
-    }
-    
-    public void setTokenId(int tokenID) {
-    	if ( tokenID < 0 ) {
-    		throw new IllegalArgumentException("Token ID must be positive");
-    	}
-    	
-    	this.tokenID = tokenID;
-    }
-    
-    public int getTokenId() {
-    	return tokenID;
     }
 }

@@ -31,11 +31,11 @@ public class ConnectionAnswerFrame implements Frame{
 	}
 
 	@Override
-	public void accept(ClientVisitor client) {
+	public void accept() {
 		switch ( responceCode ) {
-			case 0 : System.out.println("Connexion acceptï¿½e par le serveur"); break;
-			case 1 : System.out.println("Connexion refusï¿½e par le serveur : Identifiants invalides"); break;
-			case 2 : System.out.println("Connexion refusï¿½e par le serveur : Login dï¿½jï¿½ existant"); break;
+			case 0 : System.out.println("Connexion acceptée par le serveur"); break;
+			case 1 : System.out.println("Connexion refusée par le serveur : Identifiants invalides"); break;
+			case 2 : System.out.println("Connexion refusée par le serveur : Login déjà existant"); break;
 		}
 	}
 
