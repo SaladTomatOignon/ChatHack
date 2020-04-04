@@ -17,7 +17,20 @@ public interface Frame {
 	byte[] getBytes();
 	
 	/**
-	 * Perform the frame action
+	 * Perform the frame action on the given client.
+	 * 
+     * @param client The client to perform the action.
 	 */
-	void accept();
+	default void accept(ClientVisitor client) {
+		// Do nothing by default.
+	};
+	
+	/**
+	 * Perform the frame action on the given server.
+	 * 
+     * @param server The server to perform the action.
+	 */
+	default void accept(ServerVisitor server) {
+		// Do nothing by default.
+	};
 }
