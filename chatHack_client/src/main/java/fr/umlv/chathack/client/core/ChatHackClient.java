@@ -9,8 +9,10 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,7 +30,9 @@ public class ChatHackClient {
 	private SelectionKey publicServerChannelKey;
 	
 	private ServerSocketChannel privateServerSocketChannel;
-	private final Map<String, ClientId> privateClients;
+	private final Map<String, ClientContext> privateClients; // Clients to whom a connection has been established. Key:login ; Value:ClientContext
+	private final Map<Integer, String> privatePendingClients; // Clients asking for connection but not yet connected. Key:ClientID ; Value:Login
+	private final Map<String, Queue<SendPublicMessageFrame>> privatePendingMessages; // Messages sent to a client whose communication has not yet been established. Key:login ; Value:Messages queue
 	
 	private final String login;
 	private final String password;
@@ -46,6 +50,8 @@ public class ChatHackClient {
 		
 		this.privateServerSocketChannel = null;
 		this.privateClients = new HashMap<>();
+		this.privatePendingClients = new HashMap<>();
+		this.privatePendingMessages = new HashMap<>();
 		
 		this.login = Objects.requireNonNull(login);
 		this.password = Objects.requireNonNull(password);
@@ -61,7 +67,7 @@ public class ChatHackClient {
 			init();
 			mainThread.start();
 		} catch (UncheckedIOException tunneled) {
-			// C'est ici qu'on pourrait �ventuellement essayer de relancer la connexion au lieu de propager l'exception
+			// C'est ici qu'on pourrait éventuellement essayer de relancer la connexion au lieu de propager l'exception
 			throw tunneled.getCause();
 		}
 	}
@@ -81,6 +87,7 @@ public class ChatHackClient {
 	 * @throws IOException
 	 */
 	private void init() throws IOException {
+		// TODO reinitialiser tous les parametres
 		SocketChannel sc = SocketChannel.open();
 		sc.configureBlocking(false);
 		sc.connect(Objects.requireNonNull(publicServer));
@@ -126,8 +133,12 @@ public class ChatHackClient {
     
     /**
      * Finishes the process of connection with server if possible.
-     * Then send the connection request with login/password.
-     * @param key The channel server key
+     * Then, if the server corresponds to the public server,
+     * send the connection request with login / password.
+     * Else (it corresponds to a private server) send the private string message
+     * that the client wanted to send.
+     * 
+     * @param key The key corresponding to the server to which we want to connect.
      * 
      * @throws IOException
      */
@@ -139,13 +150,29 @@ public class ChatHackClient {
     		return;
     	}
     	
-    	ctx.queueMessage(new ConnectionFrame(login, password, !password.isEmpty()));
+    	if ( key.equals(publicServerChannelKey) ) {											// Public server connection
+    		/* Sending authentication request for public server */
+    		ctx.queueMessage(new ConnectionFrame(login, password, !password.isEmpty()));
+    	} else {																			// Private server connection
+    		/* Sending authentication request for private server */
+    		// TODO Envoyer la requete d'authentification au serveur privé
+    		// ctx.queueMessage(new privateAuthRequest(ctx.getLogin(), ctx.getTokenID());
+    		
+    		/* Sending messages that were pending */
+    		while ( !privatePendingMessages.get(ctx.getLogin()).isEmpty() ) {
+    			ctx.queueMessage(privatePendingMessages.get(ctx.getLogin()).remove());
+    		}
+    		privatePendingMessages.remove(ctx.getLogin());
+    		
+    		/* Adding the private client to the list */
+    		addPrivateClient(ctx.getLogin(), ctx);
+    	}
 	}
     
     /**
-     * Accept the client to the private server, and assign him his clientContext.
+     * Accept the client to the private server, and assign him its clientContext.
      * 
-     * @param key The key associated to the client
+     * @param key The key associated to the private server
      * @throws IOException
      */
     private void doAccept(SelectionKey key) throws IOException {
@@ -161,11 +188,14 @@ public class ChatHackClient {
     }
 	
     /**
-     * Close the connection with the socketChannel.
+     * Close the connection with the private client and remove him from the list.
      * It does not throw exception if an I/O error occurs.
      */
     private void silentlyClose(SelectionKey key) {
         Channel sc = (Channel) key.channel();
+        ClientContext ctx = (ClientContext) key.attachment();
+        
+        privateClients.remove(ctx.getLogin());
         try {
             sc.close();
         } catch (IOException e) {
@@ -174,19 +204,85 @@ public class ChatHackClient {
     }
     
     /**
-     * Create the private server and register it to the selector.
+     * Add client informations to the list of private clients.
+     * 
+     * @param login The client login.
+     * @param ctx The Context associated to the client.
+     */
+    private void addPrivateClient(String login, ClientContext ctx) {
+    	if ( !Objects.isNull(privateClients.put(login, ctx)) ) {
+    		logger.log(Level.WARNING, login + " was already registered in private client's list");
+    	}
+    }
+    
+    /**
+     * Authenticates the given SelectionKey to this server if the given token ID is correct.
+	 * Authentication succeed if the pair ID - login exists in the pending client list.
+     * Removes the id from the "pending" list after authentication.
+     * 
+     * @param id The token ID.
+     * @param login The login.
+     * @param ctx The client Context to authenticate.
+     */
+    private void tryAuthenticate(int id, String login, ClientContext ctx) {
+    	if ( privatePendingClients.containsKey(id) && privatePendingClients.get(id).equals(login) ) {
+    		addPrivateClient(privatePendingClients.get(id), ctx);
+    		privatePendingClients.remove(id);
+    		
+    		ctx.setLogin(login);
+    		ctx.setTokenId(id);
+    	} else {
+    		logger.log(Level.WARNING, "Someone tried with failure to authenticate with login " + login);
+    	}
+    }
+    
+    /**
+     * Creates the private server and register it to the selector.
      * 
      * @throws IOException
      */
-    private void createPrivateServer() throws IOException {
+    private void createPrivateServer() {
     	if ( !Objects.isNull(privateServerSocketChannel) ) {
     		throw new IllegalStateException("Private server already instanciated");
     	}
     	
-    	privateServerSocketChannel = ServerSocketChannel.open();
-    	privateServerSocketChannel.bind(new InetSocketAddress(PRIVATE_SERVER_PORT));
-    	privateServerSocketChannel.configureBlocking(false);
-    	privateServerSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+    	try {
+        	privateServerSocketChannel = ServerSocketChannel.open();
+        	privateServerSocketChannel.bind(new InetSocketAddress(PRIVATE_SERVER_PORT));
+        	privateServerSocketChannel.configureBlocking(false);
+        	privateServerSocketChannel.register(selector, SelectionKey.OP_ACCEPT);	
+    	} catch (IOException e) {
+    		logger.log(Level.SEVERE, "Error while creating private server", e);
+    		privateServerSocketChannel = null;
+    	}
+    }
+    
+    /**
+     * Assign the given login with an unique ID, then return the port
+     * of the private server to which the client can connect.
+     * If the private server does not exist, this method creates it.
+     * 
+     * @param login The login to assign.
+     * @return The frame containing the ID assigned and the port of the private server.
+     */
+    private void assignAndGetNewPrivateId(String login) {
+    	if ( Objects.isNull(privateServerSocketChannel) ) {
+    		createPrivateServer();
+    	}
+    	
+    	// TODO Rendre cette boucle plus jolie
+    	int id;
+    	do {
+    		id = Math.toIntExact(System.currentTimeMillis() % Integer.MAX_VALUE);
+    		int copyID = id;
+    		if ( !privatePendingClients.containsKey(id) && privateClients.values().stream().noneMatch(ctx -> (ctx.getTokenId() == copyID)) ) {
+    			break;
+    		}
+    	} while (true);
+    	
+    	privatePendingClients.put(id, login);
+    	
+    	// TODO Return la frame "Réponse à la demande de communication privée avec un autre client"
     }
 
     /**
@@ -205,30 +301,49 @@ public class ChatHackClient {
      * If the login does not correspond to an existing private client,
      * send a request to the server to create a new communication with this potential client.
      * 
+     * Sent messages while the communication has not been established are pending, and sent
+     * after the connection is established.
+     * 
      * @param msg The message to send.
      * @param login The login of the recipient client.
      */
     public void sendPrivateMessage(String msg, String login) {
-    	if ( privateClients.containsKey(login) ) {
-    		ClientId client = privateClients.get(login);
-    		ClientContext ctx = (ClientContext) client.key.attachment();
+    	if ( privateClients.containsKey(login) ) {									// If communication has already been established
+    		ClientContext ctx = privateClients.get(login);
     		
-//    		ctx.queueMessage(new PrivateMessageFrame(client.id, msg));
-    	} else {
+//    		ctx.queueMessage(new PrivateMessageFrame(msg));
+    	} else if ( privatePendingMessages.containsKey(login) ) {					// If request for private communication has been sent but not yet established
+    		privatePendingMessages.get(login).add(new SendPublicMessageFrame(msg));
+    	} else {																	// If request for private communication establishment has not been sent
     		ClientContext ctx = (ClientContext) publicServerChannelKey.attachment();
     		
+    		/* Ask for private communication establishment */
     		ctx.queueMessage(new PrivateRequestFrame(login));
-    		// TODO : Faire la demande de connexion (ne pas oublier d'envoyer la frame après)
+    		
+    		/* Queuing messages */
+    		privatePendingMessages.put(login, new LinkedList<SendPublicMessageFrame>());
+    		privatePendingMessages.get(login).add(new SendPublicMessageFrame(msg));
     	}
     }
     
-    private class ClientId {
-    	private final int id;
-    	private final SelectionKey key;
-    	
-    	private ClientId(SelectionKey key, int id) {
-    		this.key = Objects.requireNonNull(key);
-    		this.id = id;
-    	}
+    /**
+     * Connect the client to the server corresponding to another client's private server.
+     * Then register the server to selector and the server's owner to the private clients list.
+     * 
+     * @param server The server to connect to.
+     * @param login The login of the server owner.
+     * @param id The id assigned to the communication with the server.
+     * @throws IOException 
+     */
+    private void connectToPrivateServer(InetSocketAddress server, String login, int tokenID) throws IOException {
+		SocketChannel sc = SocketChannel.open();
+		sc.configureBlocking(false);
+		sc.connect(Objects.requireNonNull(server));
+		
+		var privateServerKey = sc.register(selector, SelectionKey.OP_CONNECT);
+		var ctx = new ClientContext(privateServerKey);
+		ctx.setLogin(login);
+		ctx.setTokenId(tokenID);
+		privateServerKey.attach(ctx);
     }
 }
