@@ -31,7 +31,7 @@ public class FrameReader implements Reader {
 	private ConnectionAnswerReader connectionAnswerReader;
 	private PublicMessageFromServReader publicMessageFromServReader;
 //	private PrivateRequestReader privateRequestReader;
-	// TODO
+	private PrivateAnswerReader privateAnswerReader;
 	private InfoReader infoReader;
 
 	private final Map<Byte, Supplier<ProcessStatus>> map = new HashMap<Byte, Supplier<ProcessStatus>>();
@@ -41,8 +41,8 @@ public class FrameReader implements Reader {
 			PrivateAnswerFromCliReader privateAnswerFromCliReader, PrivateAuthCliReader privateAuthCliReader,
 			PrivateMessageReader privateMessageReader, InitSendFileReader initSendFileReader, DlFileReader dlFileReader,
 			ConnectionAnswerReader connectionAnswerReader, PublicMessageFromServReader publicMessageFromServReader,
-			InfoReader infoReader) {
-		
+			PrivateAnswerReader privateAnswerReader, InfoReader infoReader) {
+
 		this.bb = bb;
 		this.connectionReader = connectionReader;
 		this.publicMessageFromCliReader = publicMessageFromCliReader;
@@ -67,7 +67,7 @@ public class FrameReader implements Reader {
 		map.put((byte) 8, () -> processReader(connectionAnswerReader));
 		map.put((byte) 9, () -> processReader(publicMessageFromServReader));
 		map.put((byte) 10, () -> processReader(privateRequestReader)); // meme que l'opCode 2 je sais pas si c'est bon
-		map.put((byte) 11, () -> ProcessStatus.ERROR); // TODO
+		map.put((byte) 11, () -> processReader(privateAnswerReader));
 		map.put((byte) 12, () -> processReader(infoReader));
 	}
 
@@ -75,7 +75,7 @@ public class FrameReader implements Reader {
 		this(bb, new ConnectionReader(bb), new PublicMessageFromCliReader(bb), new PrivateRequestReader(bb),
 				new PrivateAnswerFromCliReader(bb), new PrivateAuthCliReader(bb), new PrivateMessageReader(bb),
 				new InitSendFileReader(bb), new DlFileReader(bb), new ConnectionAnswerReader(bb),
-				new PublicMessageFromServReader(bb), new InfoReader(bb));
+				new PublicMessageFromServReader(bb), new PrivateAnswerReader(bb), new InfoReader(bb));
 	}
 
 	@Override
@@ -200,7 +200,7 @@ public class FrameReader implements Reader {
 			privateRequestReader.reset();
 			break;
 		case 11:
-			// TODO
+			privateAnswerReader.reset();
 			break;
 		case 12:
 			infoReader.reset();

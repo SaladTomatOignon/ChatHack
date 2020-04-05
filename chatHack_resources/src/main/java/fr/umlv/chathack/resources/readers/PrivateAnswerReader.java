@@ -7,11 +7,19 @@ import fr.umlv.chathack.resources.frames.PrivateAnswerFrame;
 
 public class PrivateAnswerReader implements Reader{
 	private enum State {
-		DONE, WAITING_RESPONCE_CODE, WAITING_NAME, ERROR
+		DONE, WAITING_RESPONCE_CODE, WAITING_NAME, WAITING_IP_TYPE, WAITING_IPV4, WAITING_IPV6, WAITING_PORT, WAITING_ID, ERROR
 	}
 
-	private String name;
+	
 	private byte responceCode;
+	private String name;
+	private byte ipType;
+	private byte[] ipV6 = new byte[16];
+	private byte[] ipV4 = new byte[4];
+	private int port;
+	private int id;
+	
+	
 
 	private final ByteBuffer bb;
 	private State state = State.WAITING_RESPONCE_CODE;
@@ -34,18 +42,62 @@ public class PrivateAnswerReader implements Reader{
 			if (bb.remaining() >= Byte.BYTES) {
 				responceCode = bb.get();
 				state = State.WAITING_NAME;
+			}else {
+				return ProcessStatus.REFILL;
 			}
 
 		case WAITING_NAME:
 			status = strReader.process();
 			if (status == ProcessStatus.DONE) {
 				name = (String) strReader.get();
-				state = State.DONE;
-				return ProcessStatus.DONE;
-				
+				if (responceCode == 1) {
+					state = State.DONE;
+					return ProcessStatus.DONE;
+				}
+				state = State.WAITING_IP_TYPE;
 
 			} else {
 				return status;
+			}
+		case WAITING_IP_TYPE:
+			if (bb.remaining() >= Byte.BYTES) {
+				ipType = bb.get();
+				if (ipType == 0) {
+					state = State.WAITING_IPV4;
+				}else {
+					state = State.WAITING_IPV6;
+				}
+			}else {
+				return ProcessStatus.REFILL;
+			}
+		case WAITING_IPV4:
+			if (bb.remaining() >= 4) {
+				bb.get(ipV4);
+				state = State.WAITING_PORT;
+			}else {
+				return ProcessStatus.REFILL;
+			}
+		case WAITING_IPV6:
+			if (bb.remaining() >= 16) {
+				bb.get(ipV6);
+				state = State.WAITING_PORT;
+			}else {
+				return ProcessStatus.REFILL;
+			}
+		case WAITING_PORT:
+			if (bb.remaining() >= Integer.BYTES) {
+				port = bb.getInt();
+				state = State.WAITING_ID;
+			}else {
+				return ProcessStatus.REFILL;
+			}
+		case WAITING_ID:
+			if (bb.remaining() >= Integer.BYTES) {
+				id = bb.getInt();
+				state = State.DONE;
+				return ProcessStatus.DONE;
+			}else {
+				return ProcessStatus.REFILL;
 			}
 
 		default:
