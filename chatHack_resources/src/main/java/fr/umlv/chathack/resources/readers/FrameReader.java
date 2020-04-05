@@ -17,46 +17,66 @@ public class FrameReader implements Reader {
 	private State state = State.WAITING_OPCODE;
 
 	private byte opCode;
-	
+
 	private Frame frame;
 
-	private ConnectionAnswerReader connectionAnswerReader;
-	private PublicMessageReader publicMessageReader;
+	private ConnectionReader connectionReader;
+	private PublicMessageFromCliReader publicMessageFromCliReader;
 	private PrivateRequestReader privateRequestReader;
-	private PrivateAnswerReader privateAnswerReader;
+	private PrivateAnswerFromCliReader privateAnswerFromCliReader;
+	private PrivateAuthCliReader privateAuthCliReader;
+	private PrivateMessageReader privateMessageReader;
+	private InitSendFileReader initSendFileReader;
+	private DlFileReader dlFileReader;
+	private ConnectionAnswerReader connectionAnswerReader;
+	private PublicMessageFromServReader publicMessageFromServReader;
+//	private PrivateRequestReader privateRequestReader;
+	// TODO
 	private InfoReader infoReader;
-	
-	
+
 	private final Map<Byte, Supplier<ProcessStatus>> map = new HashMap<Byte, Supplier<ProcessStatus>>();
-	
-	
-	
-	private FrameReader(ByteBuffer bb, ConnectionAnswerReader connectionAnswerReader,
-			PublicMessageReader publicMessageReader, PrivateRequestReader privateRequestReader,
-			PrivateAnswerReader privateAnswerReader, InfoReader infoReader) {
+
+	private FrameReader(ByteBuffer bb, ConnectionReader connectionReader,
+			PublicMessageFromCliReader publicMessageFromCliReader, PrivateRequestReader privateRequestReader,
+			PrivateAnswerFromCliReader privateAnswerFromCliReader, PrivateAuthCliReader privateAuthCliReader,
+			PrivateMessageReader privateMessageReader, InitSendFileReader initSendFileReader, DlFileReader dlFileReader,
+			ConnectionAnswerReader connectionAnswerReader, PublicMessageFromServReader publicMessageFromServReader,
+			InfoReader infoReader) {
+		
 		this.bb = bb;
-		this.connectionAnswerReader = connectionAnswerReader;
-		this.publicMessageReader = publicMessageReader;
+		this.connectionReader = connectionReader;
+		this.publicMessageFromCliReader = publicMessageFromCliReader;
 		this.privateRequestReader = privateRequestReader;
-		this.privateAnswerReader = privateAnswerReader;
-		map.put((byte) 0, () -> processReader(connectionAnswerReader));
-		map.put((byte) 1, () -> processReader(publicMessageReader));
+		this.privateAnswerFromCliReader = privateAnswerFromCliReader;
+		this.privateAuthCliReader = privateAuthCliReader;
+		this.privateMessageReader = privateMessageReader;
+		this.initSendFileReader = initSendFileReader;
+		this.dlFileReader = dlFileReader;
+		this.connectionAnswerReader = connectionAnswerReader;
+		this.publicMessageFromServReader = publicMessageFromServReader;
+		this.infoReader = infoReader;
+
+		map.put((byte) 0, () -> processReader(connectionReader));
+		map.put((byte) 1, () -> processReader(publicMessageFromCliReader));
 		map.put((byte) 2, () -> processReader(privateRequestReader));
-		map.put((byte) 3, () -> processReader(privateAnswerReader));
-		map.put((byte) 4, () -> processReader(infoReader));
+		map.put((byte) 3, () -> processReader(privateAnswerFromCliReader));
+		map.put((byte) 4, () -> processReader(privateAuthCliReader));
+		map.put((byte) 5, () -> processReader(privateMessageReader));
+		map.put((byte) 6, () -> processReader(initSendFileReader));
+		map.put((byte) 7, () -> processReader(dlFileReader));
+		map.put((byte) 8, () -> processReader(connectionAnswerReader));
+		map.put((byte) 9, () -> processReader(publicMessageFromServReader));
+		map.put((byte) 10, () -> processReader(privateRequestReader)); // meme que l'opCode 2 je sais pas si c'est bon
+		map.put((byte) 11, () -> ProcessStatus.ERROR); // TODO
+		map.put((byte) 12, () -> processReader(infoReader));
 	}
-
-
-
-
 
 	public FrameReader(ByteBuffer bb) {
-		this(bb, new ConnectionAnswerReader(bb), new PublicMessageReader(bb), new PrivateRequestReader(bb),  new PrivateAnswerReader(bb), new InfoReader(bb));
+		this(bb, new ConnectionReader(bb), new PublicMessageFromCliReader(bb), new PrivateRequestReader(bb),
+				new PrivateAnswerFromCliReader(bb), new PrivateAuthCliReader(bb), new PrivateMessageReader(bb),
+				new InitSendFileReader(bb), new DlFileReader(bb), new ConnectionAnswerReader(bb),
+				new PublicMessageFromServReader(bb), new InfoReader(bb));
 	}
-
-
-
-	
 
 	@Override
 	public ProcessStatus process() {
@@ -69,16 +89,13 @@ public class FrameReader implements Reader {
 			opCode = bb.get();
 			state = State.WAITING_TRAME;
 		}
-		
-		if(state == State.WAITING_TRAME) {
+
+		if (state == State.WAITING_TRAME) {
 			return map.get(opCode).get();
 		}
-		
+
 		return ProcessStatus.REFILL;
-		
-		
-		
-		
+
 //		ProcessStatus status;
 //		switch (opCode) {
 //		case 0:
@@ -146,29 +163,51 @@ public class FrameReader implements Reader {
 		if (bb.position() != 0) {
 			bb.compact();
 		}
-		
+
 		state = State.WAITING_OPCODE;
 		switch (opCode) {
 		case 0:
-			connectionAnswerReader.reset();
+			connectionReader.reset();
 			break;
 		case 1:
-			publicMessageReader.reset();
+			publicMessageFromCliReader.reset();
 			break;
-		case 2: 
+		case 2:
 			privateRequestReader.reset();
 			break;
 		case 3:
-			privateAnswerReader.reset();
+			privateAnswerFromCliReader.reset();
 			break;
-		case 4: 
+		case 4:
+			privateAuthCliReader.reset();
+			break;
+		case 5:
+			privateMessageReader.reset();
+			break;
+		case 6:
+			initSendFileReader.reset();
+			break;
+		case 7:
+			dlFileReader.reset();
+			break;
+		case 8:
+			connectionAnswerReader.reset();
+			break;
+		case 9:
+			publicMessageFromServReader.reset();
+			break;
+		case 10:
+			privateRequestReader.reset();
+			break;
+		case 11:
+			// TODO
+			break;
+		case 12:
 			infoReader.reset();
 			break;
-		
 		}
 	}
-	
-	
+
 	private ProcessStatus processReader(Reader reader) {
 		var status = reader.process();
 		if (status != ProcessStatus.DONE) {
