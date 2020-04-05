@@ -8,16 +8,15 @@ import fr.umlv.chathack.resources.frames.InitSendFileFrame;
 public class InitSendFileReader implements Reader{
 
 	private enum State {
-		DONE, WAITING_CLI_ID, WAITING_FILE_NAME,WAITING_FILE_SIZE, WAITING_FILE_ID , ERROR
+		DONE, WAITING_FILE_NAME, WAITING_FILE_SIZE, WAITING_FILE_ID , ERROR
 	}
 	
-	private int cliId;
 	private String fileName;
 	private int fileSize;
 	private int fileId;
 	
 	private final ByteBuffer bb;
-	private State state = State.WAITING_CLI_ID;
+	private State state = State.WAITING_FILE_NAME;
 	
 	private StringReader strReader;
 	
@@ -36,15 +35,7 @@ public class InitSendFileReader implements Reader{
 		}
 		ProcessStatus status;
 		switch (state) {
-		case WAITING_CLI_ID:
-			if (bb.remaining() >= Integer.BYTES) {
-				cliId = bb.getInt();
-				state = State.WAITING_FILE_NAME;
-			}else {
-				return ProcessStatus.REFILL;
-			}
-			
-			
+
 			
 		case WAITING_FILE_NAME:
 			status = strReader.process();
@@ -84,13 +75,13 @@ public class InitSendFileReader implements Reader{
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		return new InitSendFileFrame(cliId, fileName, fileSize, fileId);
+		return new InitSendFileFrame(fileName, fileSize, fileId);
 	}
 
 	@Override
 	public void reset() {
 		strReader.reset();
-		state = State.WAITING_CLI_ID;
+		state = State.WAITING_FILE_NAME;
 
 		
 	}

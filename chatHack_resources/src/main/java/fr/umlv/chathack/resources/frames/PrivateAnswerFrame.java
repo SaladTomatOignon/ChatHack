@@ -1,8 +1,8 @@
 package fr.umlv.chathack.resources.frames;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
@@ -17,19 +17,13 @@ public class PrivateAnswerFrame implements Frame {
 	
 	
 	
-	public PrivateAnswerFrame(byte responceCode, String name, byte ipType, byte[] ip, int port, int id) {
-		super();
-		this.responceCode = responceCode;
-		this.name = name;
-		this.ipType = ipType;
-		try {
-			this.address = new InetSocketAddress(InetAddress.getByAddress(ip), port);
-		} catch (UnknownHostException e) {
-			// TODO
-			System.err.println("Error bad adress");
-		}
-		this.id = id;
-	}
+	public PrivateAnswerFrame(byte responceCode, String name, InetAddress ip, int port, int id) {
+        this.responceCode = responceCode;
+        this.name = name;
+        this.ipType = (byte) (ip instanceof Inet4Address ? 0 : 1);
+        this.address = new InetSocketAddress(ip, port);
+        this.id = id;
+    }
 
 
 

@@ -7,16 +7,15 @@ import fr.umlv.chathack.resources.frames.DlFileFrame;
 
 public class DlFileReader implements Reader{
 	private enum State {
-		DONE, WAITING_CLI_ID, WAITING_FILE_ID, WAITING_DATA_SIZE, WAITING_DATA, ERROR
+		DONE, WAITING_FILE_ID, WAITING_DATA_SIZE, WAITING_DATA, ERROR
 	}
 	
-	private int cliId;
 	private int fileId;
 	private int dataSize;
 	private byte[] data = new byte[1024];
 	
 	private final ByteBuffer bb;
-	private State state = State.WAITING_CLI_ID;
+	private State state = State.WAITING_FILE_ID;
 	
 	
 	
@@ -32,13 +31,7 @@ public class DlFileReader implements Reader{
 			throw new IllegalStateException();
 		}
 		switch (state) {
-		case WAITING_CLI_ID:
-			if (bb.remaining() >= Integer.BYTES) {
-				cliId = bb.getInt();
-				state = State.WAITING_FILE_ID;
-			}else {
-				return ProcessStatus.REFILL;
-			}
+
 			
 			
 			
@@ -79,12 +72,12 @@ public class DlFileReader implements Reader{
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		return new DlFileFrame(cliId, fileId, dataSize, data);
+		return new DlFileFrame(fileId, dataSize, data);
 	}
 
 	@Override
 	public void reset() {
-		state = State.WAITING_CLI_ID;
+		state = State.WAITING_FILE_ID;
 
 		
 	}

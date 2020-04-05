@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class PrivateAnswerFromCliFrame implements Frame {
+	
 	private byte responceCode;
 	private String name;
 
@@ -12,22 +13,24 @@ public class PrivateAnswerFromCliFrame implements Frame {
 	
 	
 	
+	private PrivateAnswerFromCliFrame(byte responceCode, String name, int port, int id) {
+        this.responceCode = responceCode;
+        this.name = name;
+        this.port = port;
+        this.id = id;
+    }
 	
 	
-	
-	public PrivateAnswerFromCliFrame(byte responceCode, String name, int port, int id) {
-		this.responceCode = responceCode;
-		this.name = name;
-		this.port = port;
-		this.id = id;
-	}
+    public PrivateAnswerFromCliFrame(String name, int port, int id) {
+        this((byte) 0, name, port, id);
+    }
 
 
 
 
-	public PrivateAnswerFromCliFrame(byte connectionAccept, String name) {
-		this(connectionAccept, name, -1, -1);
-	}
+    public PrivateAnswerFromCliFrame(String name) {
+        this((byte) 1, name, -1, -1);
+    }
 
 
 

@@ -4,14 +4,12 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class DlFileFrame implements Frame{
-	private int cliId;
 	private int fileId;
 	private int dataSize;
 	private byte data[];
 	
 	
-	public DlFileFrame(int cliId, int fileId, int dataSize, byte[] data) {
-		this.cliId = cliId;
+	public DlFileFrame(int fileId, int dataSize, byte[] data) {
 		this.fileId = fileId;
 		this.dataSize = dataSize;
 		this.data = Arrays.copyOf(data, dataSize);
@@ -21,7 +19,7 @@ public class DlFileFrame implements Frame{
 	
 	@Override
 	public void accept(ClientVisitor client) {
-		System.out.println("cliId : " + cliId + ", fileId : " + fileId  + ", dataSize : " + dataSize + ", data : " + data);
+		System.out.println("fileId : " + fileId  + ", dataSize : " + dataSize + ", data : " + data);
 	}
 
 	@Override
@@ -30,8 +28,6 @@ public class DlFileFrame implements Frame{
 
 		bb.put((byte) 6);
 
-		bb.putInt(cliId);
-		
 		bb.putInt(fileId);
 		
 		bb.putInt(dataSize);
@@ -46,7 +42,7 @@ public class DlFileFrame implements Frame{
 	
 	@Override
 	public int size() {
-		return dataSize + 1 + 4 + 4 + 4;
+		return dataSize + 1 + 4 + 4;
 	}
 	
 		

@@ -1,16 +1,17 @@
 package fr.umlv.chathack.resources.readers;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
 import fr.umlv.chathack.resources.frames.PrivateAnswerFrame;
 
-
-public class PrivateAnswerReader implements Reader{
+public class PrivateAnswerReader implements Reader {
 	private enum State {
-		DONE, WAITING_RESPONCE_CODE, WAITING_NAME, WAITING_IP_TYPE, WAITING_IPV4, WAITING_IPV6, WAITING_PORT, WAITING_ID, ERROR
+		DONE, WAITING_RESPONCE_CODE, WAITING_NAME, WAITING_IP_TYPE, WAITING_IPV4, WAITING_IPV6, WAITING_PORT,
+		WAITING_ID, ERROR
 	}
 
-	
 	private byte responceCode;
 	private String name;
 	private byte ipType;
@@ -18,8 +19,6 @@ public class PrivateAnswerReader implements Reader{
 	private byte[] ipV4 = new byte[4];
 	private int port;
 	private int id;
-	
-	
 
 	private final ByteBuffer bb;
 	private State state = State.WAITING_RESPONCE_CODE;
@@ -42,7 +41,7 @@ public class PrivateAnswerReader implements Reader{
 			if (bb.remaining() >= Byte.BYTES) {
 				responceCode = bb.get();
 				state = State.WAITING_NAME;
-			}else {
+			} else {
 				return ProcessStatus.REFILL;
 			}
 
@@ -64,31 +63,31 @@ public class PrivateAnswerReader implements Reader{
 				ipType = bb.get();
 				if (ipType == 0) {
 					state = State.WAITING_IPV4;
-				}else {
+				} else {
 					state = State.WAITING_IPV6;
 				}
-			}else {
+			} else {
 				return ProcessStatus.REFILL;
 			}
 		case WAITING_IPV4:
 			if (bb.remaining() >= 4) {
 				bb.get(ipV4);
 				state = State.WAITING_PORT;
-			}else {
+			} else {
 				return ProcessStatus.REFILL;
 			}
 		case WAITING_IPV6:
 			if (bb.remaining() >= 16) {
 				bb.get(ipV6);
 				state = State.WAITING_PORT;
-			}else {
+			} else {
 				return ProcessStatus.REFILL;
 			}
 		case WAITING_PORT:
 			if (bb.remaining() >= Integer.BYTES) {
 				port = bb.getInt();
 				state = State.WAITING_ID;
-			}else {
+			} else {
 				return ProcessStatus.REFILL;
 			}
 		case WAITING_ID:
@@ -96,7 +95,7 @@ public class PrivateAnswerReader implements Reader{
 				id = bb.getInt();
 				state = State.DONE;
 				return ProcessStatus.DONE;
-			}else {
+			} else {
 				return ProcessStatus.REFILL;
 			}
 
@@ -111,7 +110,21 @@ public class PrivateAnswerReader implements Reader{
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		return new PrivateAnswerFrame(responceCode, name);
+		if (responceCode == 1) {
+			return new PrivateAnswerFrame(responceCode, name);
+		}
+		try {
+			if (ipType == 0) {
+				return new PrivateAnswerFrame(responceCode, name, InetAddress.getByAddress(ipV4), port, id);
+
+			}
+			return new PrivateAnswerFrame(responceCode, name, InetAddress.getByAddress(ipV6), port, id);
+
+		} catch (UnknownHostException e) {
+			// TODO 
+			System.err.println("Invalid address");
+		}
+		return null; //normalement ca arrive jamais là
 	}
 
 	@Override

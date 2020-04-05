@@ -5,15 +5,13 @@ import java.nio.charset.StandardCharsets;
 
 public class InitSendFileFrame implements Frame{
 	
-	private int cliId;
 	private String fileName;
 	private int fileSize;
 	private int fileId;
 
 	
 
-	public InitSendFileFrame(int cliId, String fileName, int fileSize, int fileId) {
-		this.cliId = cliId;
+	public InitSendFileFrame(String fileName, int fileSize, int fileId) {
 		this.fileName = fileName;
 		this.fileSize = fileSize;
 		this.fileId = fileId;
@@ -21,7 +19,7 @@ public class InitSendFileFrame implements Frame{
 
 	@Override
 	public void accept(ClientVisitor client) {
-		System.out.println("cliId : " + cliId + ", fileName : " + fileName  + ", fileSize : " + fileSize + ", fileId : " + fileId);
+		System.out.println("fileName : " + fileName  + ", fileSize : " + fileSize + ", fileId : " + fileId);
 	}
 
 	@Override
@@ -32,8 +30,6 @@ public class InitSendFileFrame implements Frame{
 
 		bb.put((byte) 5);
 
-		bb.putInt(cliId);
-		
 		bb.putInt(fileNameEncode.remaining());
 		bb.put(fileNameEncode);
 		
@@ -50,7 +46,7 @@ public class InitSendFileFrame implements Frame{
 	public int size() {
 		var cs = StandardCharsets.UTF_8;
 		
-		return cs.encode(fileName).remaining() + 1 + 4 + 4 + 4 + 4;
+		return cs.encode(fileName).remaining() + 1 + 4 + 4 + 4;
 		
 
 	}

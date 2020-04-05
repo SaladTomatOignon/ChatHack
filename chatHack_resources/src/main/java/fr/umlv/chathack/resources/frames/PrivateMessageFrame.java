@@ -5,17 +5,15 @@ import java.nio.charset.StandardCharsets;
 
 public class PrivateMessageFrame implements Frame{
 
-	private int cliId;
 	private String message;
 
-	public PrivateMessageFrame(int cliId, String message) {
-		this.cliId = cliId;
+	public PrivateMessageFrame(String message) {
 		this.message = message;
 	}
 
 	@Override
 	public void accept(ClientVisitor client) {
-		System.out.println("cliId : " + cliId + ", message : " + message);
+		System.out.println("message : " + message);
 	}
 
 	@Override
@@ -26,8 +24,6 @@ public class PrivateMessageFrame implements Frame{
 
 		bb.put((byte) 4);
 
-		bb.putInt(cliId);
-		
 		bb.putInt(messageEncode.remaining());
 		bb.put(messageEncode);
 
@@ -41,7 +37,7 @@ public class PrivateMessageFrame implements Frame{
 	public int size() {
 		var cs = StandardCharsets.UTF_8;
 		
-		return cs.encode(message).remaining() + 1 + 4 + 4;
+		return cs.encode(message).remaining() + 1 + 4;
 		
 
 	}

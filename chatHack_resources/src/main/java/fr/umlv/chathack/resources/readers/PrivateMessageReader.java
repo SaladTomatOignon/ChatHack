@@ -11,14 +11,13 @@ import fr.umlv.chathack.resources.frames.PrivateMessageFrame;
 public class PrivateMessageReader implements Reader{
 	
 	private enum State {
-		DONE, WAITING_CLI_ID, WAITING_MESSAGE, ERROR
+		DONE, WAITING_MESSAGE, ERROR
 	}
 	
 	private String message;
-	private int cliId;
 	
 	private final ByteBuffer bb;
-	private State state = State.WAITING_CLI_ID;
+	private State state = State.WAITING_MESSAGE;
 	
 	private StringReader strReader;
 	
@@ -36,16 +35,7 @@ public class PrivateMessageReader implements Reader{
 			throw new IllegalStateException();
 		}
 		ProcessStatus status;
-		switch (state) {
-		case WAITING_CLI_ID:
-			if (bb.remaining() >= Integer.BYTES) {
-				cliId = bb.getInt();
-				state = State.WAITING_MESSAGE;
-			}else {
-				return ProcessStatus.REFILL;
-			}
-			
-			
+		switch (state) {		
 			
 		case WAITING_MESSAGE:
 			status = strReader.process();
@@ -70,13 +60,13 @@ public class PrivateMessageReader implements Reader{
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		return new PrivateMessageFrame(cliId, message);
+		return new PrivateMessageFrame(message);
 	}
 
 	@Override
 	public void reset() {
 		strReader.reset();
-		state = State.WAITING_CLI_ID;
+		state = State.WAITING_MESSAGE;
 
 		
 	}

@@ -76,7 +76,10 @@ public class PrivateAnswerFromCliReader implements Reader{
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		return new PrivateAnswerFromCliFrame(responceCode, name);
+		if (responceCode == 0) {
+			return new PrivateAnswerFromCliFrame(name, port, id);
+		}
+		return new PrivateAnswerFromCliFrame(name);
 	}
 
 	@Override
