@@ -29,7 +29,7 @@ public class InfoFrame implements Frame{
 		var bb = ByteBuffer.allocate(1024);
 		var messageEncode = cs.encode(message);
 		
-		bb.put((byte) 4 );
+		bb.put((byte) 11 );
 		
 		bb.put(infoCode);
 		

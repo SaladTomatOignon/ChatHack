@@ -22,7 +22,7 @@ public class PrivateMessageFrame implements Frame{
 		var bb = ByteBuffer.allocate(1024);
 		var messageEncode = cs.encode(message);
 
-		bb.put((byte) 4);
+		bb.put((byte) 5);
 
 		bb.putInt(messageEncode.remaining());
 		bb.put(messageEncode);

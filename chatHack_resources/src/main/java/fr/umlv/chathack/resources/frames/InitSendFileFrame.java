@@ -28,7 +28,7 @@ public class InitSendFileFrame implements Frame{
 		var bb = ByteBuffer.allocate(1024);
 		var fileNameEncode = cs.encode(fileName);
 
-		bb.put((byte) 5);
+		bb.put((byte) 6);
 
 		bb.putInt(fileNameEncode.remaining());
 		bb.put(fileNameEncode);

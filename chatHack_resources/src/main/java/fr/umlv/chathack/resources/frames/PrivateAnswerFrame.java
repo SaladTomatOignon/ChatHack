@@ -46,7 +46,7 @@ public class PrivateAnswerFrame implements Frame {
 		var bb = ByteBuffer.allocate(1024);
 		var nameEncode = cs.encode(name);
 		
-		bb.put((byte) 11 );
+		bb.put((byte) 10 );
 		
 		bb.put(responceCode);
 		

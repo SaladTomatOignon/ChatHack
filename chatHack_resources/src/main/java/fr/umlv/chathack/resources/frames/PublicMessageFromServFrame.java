@@ -24,7 +24,7 @@ public class PublicMessageFromServFrame implements Frame {
 		var bb = ByteBuffer.allocate(1024);
 		var messageEncode = cs.encode(message);
 		var nameEncode = cs.encode(name);
-		bb.put((byte) 1);
+		bb.put((byte) 9);
 
 		bb.putInt(nameEncode.remaining());
 		bb.put(nameEncode);

@@ -26,7 +26,7 @@ public class DlFileFrame implements Frame{
 	public byte[] getBytes() {
 		var bb = ByteBuffer.allocate(1024);
 
-		bb.put((byte) 6);
+		bb.put((byte) 7);
 
 		bb.putInt(fileId);
 		

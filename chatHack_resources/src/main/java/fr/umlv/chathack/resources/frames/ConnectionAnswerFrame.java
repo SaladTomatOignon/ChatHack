@@ -19,7 +19,7 @@ public class ConnectionAnswerFrame implements Frame{
 	public byte[] getBytes() {
 		var bb = ByteBuffer.allocate(1024);
 		
-		bb.put((byte) 0);
+		bb.put((byte) 8);
 		
 		bb.put((byte) responceCode);
 
