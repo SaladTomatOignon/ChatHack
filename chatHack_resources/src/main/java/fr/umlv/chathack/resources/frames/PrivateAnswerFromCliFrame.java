@@ -57,8 +57,6 @@ public class PrivateAnswerFromCliFrame implements Frame {
 			bb.putInt(id);
 		}
 		
-		bb.putInt(nameEncode.remaining());
-		bb.put(nameEncode);
 		
 		bb.flip();
 		byte[] arr = new byte[bb.remaining()];

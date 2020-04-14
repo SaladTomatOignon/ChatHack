@@ -197,12 +197,9 @@ public class FrameReader implements Reader {
 			publicMessageFromServReader.reset();
 			break;
 		case 10:
-			privateRequestReader.reset();
-			break;
-		case 11:
 			privateAnswerReader.reset();
 			break;
-		case 12:
+		case 11:
 			infoReader.reset();
 			break;
 		}

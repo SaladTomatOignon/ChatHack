@@ -4,8 +4,7 @@ import java.nio.ByteBuffer;
 
 import fr.umlv.chathack.resources.frames.PrivateAnswerFromCliFrame;
 
-
-public class PrivateAnswerFromCliReader implements Reader{
+public class PrivateAnswerFromCliReader implements Reader {
 	private enum State {
 		DONE, WAITING_RESPONCE_CODE, WAITING_NAME, WAITING_PORT, WAITING_ID, ERROR
 	}
@@ -36,6 +35,8 @@ public class PrivateAnswerFromCliReader implements Reader{
 			if (bb.remaining() >= Byte.BYTES) {
 				responceCode = bb.get();
 				state = State.WAITING_NAME;
+			} else {
+				return ProcessStatus.REFILL;
 			}
 
 		case WAITING_NAME:
@@ -45,16 +46,18 @@ public class PrivateAnswerFromCliReader implements Reader{
 				if (responceCode == 1) {
 					state = State.DONE;
 					return ProcessStatus.DONE;
-				}else {
+				} else {
 					state = State.WAITING_PORT;
 				}
 
-			} 
+			} else {
+				return ProcessStatus.REFILL;
+			}
 		case WAITING_PORT:
 			if (bb.remaining() >= Integer.BYTES) {
 				port = bb.getInt();
 				state = State.WAITING_ID;
-			}else {
+			} else {
 				return ProcessStatus.REFILL;
 			}
 		case WAITING_ID:
@@ -62,7 +65,7 @@ public class PrivateAnswerFromCliReader implements Reader{
 				id = bb.getInt();
 				state = State.DONE;
 				return ProcessStatus.DONE;
-			}else {
+			} else {
 				return ProcessStatus.REFILL;
 			}
 		default:
