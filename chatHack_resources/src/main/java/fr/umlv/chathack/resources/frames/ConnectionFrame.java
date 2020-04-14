@@ -20,7 +20,9 @@ public class ConnectionFrame implements Frame {
 
 	@Override
 	public void accept(ServerVisitor server) {
-		System.out.println("name : " + name + ", pass : " + pass + " passNeed : " + passNeed);
+		byte responseCode = passNeed ? server.tryLogin(name, pass) : server.tryLogin(name);
+		
+		server.sendBackFrame(new ConnectionAnswerFrame(responseCode));
 	}
 
 	@Override

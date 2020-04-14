@@ -12,11 +12,20 @@ public class PrivateRequestFrame implements Frame{
 		super();
 		this.name = name;
 	}
-
-
+	
+	@Override
+	public void accept(ClientVisitor client) {
+		client.askForPrivateCommunication(name);
+	}
+	
 	@Override
 	public void accept(ServerVisitor server) {
-		System.out.println(name);
+		try {
+			server.sendFrame(new PrivateRequestFrame(server.getLogin()), name);
+		} catch (IllegalArgumentException iae) {
+			// The recipient client does not exists.
+			server.sendBackFrame(new PrivateAnswerFrame((byte) 2, name));
+		}
 	}
 	
 	@Override

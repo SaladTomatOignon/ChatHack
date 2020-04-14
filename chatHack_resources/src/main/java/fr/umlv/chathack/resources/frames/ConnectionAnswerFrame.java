@@ -2,7 +2,7 @@ package fr.umlv.chathack.resources.frames;
 
 import java.nio.ByteBuffer;
 
-public class ConnectionAnswerFrame implements Frame{
+public class ConnectionAnswerFrame implements Frame {
 
 	private byte responceCode;
 	
@@ -33,9 +33,9 @@ public class ConnectionAnswerFrame implements Frame{
 	@Override
 	public void accept(ClientVisitor client) {
 		switch ( responceCode ) {
-			case 0 : System.out.println("Connexion accept�e par le serveur"); break;
-			case 1 : System.out.println("Connexion refus�e par le serveur : Identifiants invalides"); break;
-			case 2 : System.out.println("Connexion refus�e par le serveur : Login d�j� existant"); break;
+			case 0 : System.out.println("Connexion acceptée par le serveur"); break;
+			case 1 : System.out.println("Connexion refusée par le serveur : Identifiants invalides"); break;
+			case 2 : System.out.println("Connexion refusée par le serveur : Login déjà existant"); break;
 		}
 	}
 

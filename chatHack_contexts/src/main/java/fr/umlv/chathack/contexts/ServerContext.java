@@ -1,15 +1,19 @@
 package fr.umlv.chathack.contexts;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.umlv.chathack.resources.frames.Frame;
+import fr.umlv.chathack.resources.frames.PublicMessageFromServFrame;
 import fr.umlv.chathack.resources.frames.ServerVisitor;
 import fr.umlv.chathack.resources.readers.FrameReader;
 
@@ -87,9 +91,11 @@ public class ServerContext implements ServerVisitor {
      *
      * The convention is that bbin is in write-mode before the call
      * to process and after the call
+     * 
+     * @throws IOException 
      *
      */
-    private void processIn() {
+    private void processIn() throws IOException {
     	switch ( freader.process() ) {
     		case DONE :
     			Frame frame = (Frame) freader.get();
@@ -158,7 +164,6 @@ public class ServerContext implements ServerVisitor {
      * @param frame The frame to add.
      */
     public void queueMessage(Frame frame) {
-    	System.out.println("Dans queue message, on ajoute " + frame);
     	synchronized ( logger ) {
     		queue.add(frame);
     	}
@@ -167,45 +172,62 @@ public class ServerContext implements ServerVisitor {
         updateInterestOps();
     }
     
-    /**
-     * Try to login the client to the server.
-     * It succeed if the logins are registered by the server.
-     * 
-     * @param login
-     * @param password
-     * @return 0 if login succeed or 1 if it failed.
-     */
+    @Override
+    public String getLogin() {
+    	return login;
+    }
+    
+    @Override
     public byte tryLogin(String login, String password) {
     	if ( !server.isRegistered(login, password) ) {
     		return 1;
     	}
     	
-    	server.authenticateClient(login);
+    	server.authenticateClient(login, this);
+    	this.login = login;
+    	
     	return 0;
     }
     
-    /**
-     * Try to login the client to the server.
-     * It succeed if the given login is not already authenticated by the server.
-     * 
-     * @param login
-     * @return 0 if login succeed or 2 if it failed.
-     */
+    @Override
     public byte tryLogin(String login) {
     	if ( server.clientAuthenticated(login) ) {
     		return 2;
     	}
     	
-    	server.authenticateClient(login);
+    	server.authenticateClient(login, this);
+    	this.login = login;
+    	
     	return 0;
     }
-    
-    /**
-     * Retrieve the client login.
-     * 
-     * @return The client login.
-     */
-    public String getLogin() {
-    	return login;
-    }
+
+	@Override
+	public void broadcastMessage(String message) throws IllegalStateException {
+		if ( Objects.isNull(login) ) {
+			// This client is not authenticated to the server.
+			throw new IllegalStateException("Client not authenticated to the server");
+		}
+		
+		server.broadcast(new PublicMessageFromServFrame(login, message));
+	}
+
+	@Override
+	public void sendFrame(Frame frame, String dest) throws IllegalStateException, IllegalArgumentException {
+		if ( Objects.isNull(login) ) {
+			// This client is not authenticated to the server.
+			throw new IllegalStateException("Client not authenticated to the server");
+		}
+		
+		server.sendFrame(frame, dest);
+	}
+
+	@Override
+	public void sendBackFrame(Frame frame) {
+		queueMessage(Objects.requireNonNull(frame));
+	}
+
+	@Override
+	public InetAddress getInetAddress() throws IOException {
+		return ((InetSocketAddress) sc.getRemoteAddress()).getAddress();
+	}
 }

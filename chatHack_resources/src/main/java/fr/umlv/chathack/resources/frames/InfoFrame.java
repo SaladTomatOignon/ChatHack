@@ -2,6 +2,7 @@ package fr.umlv.chathack.resources.frames;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
 
 public class InfoFrame implements Frame{
 
@@ -17,10 +18,19 @@ public class InfoFrame implements Frame{
 	}
 
 
-
-
-	public void accept() {
-		System.out.println("infoCode : " + infoCode + " message : " + message);
+	@Override
+	public void accept(ClientVisitor client) {
+		switch (infoCode) {
+			case 0:
+				client.log(Level.INFO, message);
+				break;
+			case 1:
+				client.log(Level.WARNING, message);
+				break;
+			case 2:
+				client.log(Level.SEVERE, message);
+				break;
+		}
 	}
 	
 	@Override

@@ -1,5 +1,7 @@
 package fr.umlv.chathack.resources.frames;
 
+import java.io.IOException;
+
 public interface Frame {
 	
 	/**
@@ -20,8 +22,10 @@ public interface Frame {
 	 * Perform the frame action on the given client.
 	 * 
      * @param client The client to perform the action.
+     * 
+	 * @throws IOException 
 	 */
-	default void accept(ClientVisitor client) {
+	default void accept(ClientVisitor client) throws IOException {
 		// Do nothing by default.
 	};
 	
@@ -29,8 +33,10 @@ public interface Frame {
 	 * Perform the frame action on the given server.
 	 * 
      * @param server The server to perform the action.
+     * 
+	 * @throws IOException 
 	 */
-	default void accept(ServerVisitor server) {
+	default void accept(ServerVisitor server) throws IOException {
 		// Do nothing by default.
 	};
 }

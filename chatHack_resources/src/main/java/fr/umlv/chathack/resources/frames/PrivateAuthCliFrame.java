@@ -42,6 +42,6 @@ public class PrivateAuthCliFrame implements Frame{
 
 	@Override
 	public void accept(ClientVisitor client) {
-		//TODO
+		client.tryAuthenticate(tokenId, name);
 	}
 }
