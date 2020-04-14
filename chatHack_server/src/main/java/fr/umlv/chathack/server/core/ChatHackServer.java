@@ -8,14 +8,15 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.umlv.chathack.contexts.Server;
 import fr.umlv.chathack.contexts.ServerContext;
+import fr.umlv.chathack.resources.frames.Frame;
 import fr.umlv.chathack.server.database.DataBase;
 
 public class ChatHackServer implements Server {
@@ -26,7 +27,7 @@ public class ChatHackServer implements Server {
     private final Selector selector;
     
     private final DataBase dataBase;
-    private final Set<String> authenticatedClients;
+    private final Map<String, ServerContext> authenticatedClients;
 	
 	public ChatHackServer(int port) throws IOException {
         this.serverSocketChannel = ServerSocketChannel.open();
@@ -35,7 +36,7 @@ public class ChatHackServer implements Server {
         this.selector = Selector.open();
         
         this.dataBase = DataBase.connect();
-        this.authenticatedClients = new HashSet<>();
+        this.authenticatedClients = new HashMap<>();
 	}
 	
     public void launch() throws IOException {
@@ -50,6 +51,13 @@ public class ChatHackServer implements Server {
 		}
     }
     
+	/**
+	 * Perform an action according to the available state of the given SelectionKey.
+	 * 
+	 * @param key The key ready for an I/O action.
+	 * 
+     * @throws UncheckedIOException if acceptance caused an IOException.
+	 */
 	private void treatKey(SelectionKey key) {
 		try {
 			if (key.isValid() && key.isAcceptable()) {
@@ -104,18 +112,39 @@ public class ChatHackServer implements Server {
         }
     }
     
+	@Override
+	public void broadcast(Frame frame) {
+		for (var client : authenticatedClients.keySet()) {
+			var ctx = authenticatedClients.get(client);
+			
+			ctx.queueMessage(frame);
+		}
+	}
+
+	@Override
+	public void sendFrame(Frame frame, String dest) throws IllegalArgumentException {
+		if ( !authenticatedClients.containsKey(dest) ) {
+			throw new IllegalArgumentException(dest + " is not authenticated to the server");
+		}
+		
+		var ctx = authenticatedClients.get(dest);
+		
+		ctx.queueMessage(frame);
+	}
+    
     @Override
     public boolean isRegistered(String login, String password) {
     	return dataBase.isRegistered(login, password);
     }
     
     @Override
-    public void authenticateClient(String login) {
-    	authenticatedClients.add(login);
+    public void authenticateClient(String login, ServerContext ctx) {
+    	authenticatedClients.put(login, ctx);
     }
     
     @Override
     public boolean clientAuthenticated(String login) {
-    	return authenticatedClients.contains(login);
+    	return authenticatedClients.containsKey(login);
     }
+
 }
