@@ -13,7 +13,7 @@ public class PublicMessageFromCliFrame implements Frame {
 
 	@Override
 	public void accept(ServerVisitor server) {
-		System.out.println(message);
+		server.broadcastMessage(message);
 	}
 
 	@Override

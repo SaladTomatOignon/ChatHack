@@ -1,5 +1,6 @@
 package fr.umlv.chathack.resources.frames;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
@@ -31,13 +32,17 @@ public class PrivateAnswerFromCliFrame implements Frame {
     public PrivateAnswerFromCliFrame(String name) {
         this((byte) 1, name, -1, -1);
     }
+    
+    
+    @Override
+    public void accept(ServerVisitor server) throws IOException {
+    	if ( responceCode == 0 ) {		// Request accepted
+    		server.sendFrame(new PrivateAnswerFrame((byte) 0, server.getLogin(), server.getInetAddress(), port, id), name);
+    	} else {						// Request refused
+    		server.sendFrame(new PrivateAnswerFrame((byte) 1, server.getLogin()), name);
+    	}
+    }
 
-
-
-
-	public void accept() {
-		System.out.println("connectionAccept : " + responceCode + " name : " + name);
-	}
 	
 	@Override
 	public byte[] getBytes() {

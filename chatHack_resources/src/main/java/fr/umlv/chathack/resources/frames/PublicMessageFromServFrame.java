@@ -15,7 +15,8 @@ public class PublicMessageFromServFrame implements Frame {
 
 	@Override
 	public void accept(ClientVisitor client) {
-		System.out.println("name : " + name + ", message : " + message);
+		System.out.println("From " + name + " to everyone :");
+		System.out.println(message);
 	}
 
 	@Override

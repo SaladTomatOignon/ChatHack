@@ -1,5 +1,6 @@
 package fr.umlv.chathack.resources.frames;
 
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -34,10 +35,21 @@ public class PrivateAnswerFrame implements Frame {
 	}
 
 
-
-
-	public void accept() {
-		System.out.println("connectionAccept : " + responceCode + " name : " + name);
+	@Override
+	public void accept(ClientVisitor client) throws IOException {
+		switch ( responceCode ) {
+    		case 0:	// Communication request accepted
+    			client.connectToPrivateServer(address, name, id);
+    			break;
+    		case 1:	// Communication request refused
+    			System.out.println(name + " refused to establish a private communication with you");
+    			client.abortPrivateCommunicationRequest(name);
+    			break;
+    		case 2:	// Unknown recipient client
+    			System.out.println(name + " is not connected to the server");
+    			client.abortPrivateCommunicationRequest(name);
+    			break;
+    	}
 	}
 	
 	@Override

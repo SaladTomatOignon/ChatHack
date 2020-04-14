@@ -66,7 +66,6 @@ public class FrameReader implements Reader {
 		map.put((byte) 7, () -> processReader(dlFileReader));
 		map.put((byte) 8, () -> processReader(connectionAnswerReader));
 		map.put((byte) 9, () -> processReader(publicMessageFromServReader));
-//		map.put((byte) 10, () -> processReader(privateRequestReader)); // meme que l'opCode 2 je sais pas si c'est bon
 		map.put((byte) 10, () -> processReader(privateAnswerReader));
 		map.put((byte) 11, () -> processReader(infoReader));
 	}

@@ -13,7 +13,7 @@ public class PrivateMessageFrame implements Frame{
 
 	@Override
 	public void accept(ClientVisitor client) {
-		System.out.println("message : " + message);
+		client.printPrivateMessage(message);
 	}
 
 	@Override
