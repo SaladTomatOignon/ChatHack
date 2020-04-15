@@ -28,10 +28,12 @@ public class PrivateAuthCliFrame implements Frame{
 
 		bb.put((byte) 4);
 
-		bb.putInt(tokenId);
+		
 		
 		bb.putInt(nameEncode.remaining());
 		bb.put(nameEncode);
+		
+		bb.putInt(tokenId);
 
 		bb.flip();
 		byte[] arr = new byte[bb.remaining()];
