@@ -54,6 +54,7 @@ public class FrameReader implements Reader {
 		this.dlFileReader = dlFileReader;
 		this.connectionAnswerReader = connectionAnswerReader;
 		this.publicMessageFromServReader = publicMessageFromServReader;
+		this.privateAnswerReader = privateAnswerReader;
 		this.infoReader = infoReader;
 
 		map.put((byte) 0, () -> processReader(connectionReader));
@@ -90,7 +91,11 @@ public class FrameReader implements Reader {
 		}
 
 		if (state == State.WAITING_TRAME) {
-			return map.get(opCode).get();
+			var fun =  map.get(opCode);
+			if (fun == null) {
+				return ProcessStatus.ERROR;
+			}
+			return fun.get();
 		}
 
 		return ProcessStatus.REFILL;
