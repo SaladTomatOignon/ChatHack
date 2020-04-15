@@ -6,9 +6,10 @@ import java.nio.ByteBuffer;
 
 import fr.umlv.chathack.resources.frames.PrivateAnswerFrame;
 
+
 public class PrivateAnswerReader implements Reader {
 	private enum State {
-		DONE, WAITING_RESPONCE_CODE, WAITING_NAME, WAITING_IP_TYPE, WAITING_IPV4, WAITING_IPV6, WAITING_PORT,
+		DONE, WAITING_RESPONCE_CODE, WAITING_NAME, WAITING_IP_TYPE, WAITING_IP, WAITING_PORT,
 		WAITING_ID, ERROR
 	}
 
@@ -61,27 +62,22 @@ public class PrivateAnswerReader implements Reader {
 		case WAITING_IP_TYPE:
 			if (bb.remaining() >= Byte.BYTES) {
 				ipType = bb.get();
-				if (ipType == 0) {
-					state = State.WAITING_IPV4;
-				} else {
-					state = State.WAITING_IPV6;
-				}
+				state = State.WAITING_IP;
 			} else {
 				return ProcessStatus.REFILL;
 			}
-		case WAITING_IPV4:
-			if (bb.remaining() >= 4) {
+		case WAITING_IP:
+			if (bb.remaining() >= 4 && ipType == 0) {
 				bb.get(ipV4);
 				state = State.WAITING_PORT;
 			} else {
-				return ProcessStatus.REFILL;
-			}
-		case WAITING_IPV6:
-			if (bb.remaining() >= 16) {
-				bb.get(ipV6);
-				state = State.WAITING_PORT;
-			} else {
-				return ProcessStatus.REFILL;
+				if (bb.remaining() >= 16 && ipType == 1) {
+					bb.get(ipV6);
+					state = State.WAITING_PORT;
+				}else {
+					return ProcessStatus.REFILL;
+				}
+				
 			}
 		case WAITING_PORT:
 			if (bb.remaining() >= Integer.BYTES) {
@@ -132,5 +128,6 @@ public class PrivateAnswerReader implements Reader {
 		strReader.reset();
 		state = State.WAITING_RESPONCE_CODE;
 	}
+	
 
 }
