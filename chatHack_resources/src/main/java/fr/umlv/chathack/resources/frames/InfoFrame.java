@@ -17,20 +17,44 @@ public class InfoFrame implements Frame{
 		this.message = message;
 	}
 
+	@Override
+	public void accept(ServerVisitor server) {
+		Level level = null;
+		
+		switch (infoCode) {
+			case 0:
+				level = Level.INFO;
+				break;
+			case 1:
+				level = Level.WARNING;
+				break;
+			case 2:
+				level = Level.SEVERE;
+				break;
+		}
+		
+		System.out.println("Message received : " + message);
+		server.log(level, "Message received : " + message);
+	}
 
 	@Override
 	public void accept(ClientVisitor client) {
+		Level level = null;
+		
 		switch (infoCode) {
 			case 0:
-				client.log(Level.INFO, message);
+				level = Level.INFO;
 				break;
 			case 1:
-				client.log(Level.WARNING, message);
+				level = Level.WARNING;
 				break;
 			case 2:
-				client.log(Level.SEVERE, message);
+				level = Level.SEVERE;
 				break;
 		}
+		
+		System.out.println("Message received : " + message);
+		client.log(level, "Message received : " + message);
 	}
 	
 	@Override

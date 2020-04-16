@@ -2,8 +2,17 @@ package fr.umlv.chathack.resources.frames;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.logging.Level;
 
 public interface ServerVisitor {
+	
+	/**
+	 * Log a message.
+	 * 
+	 * @param level One of the message level identifiers, e.g., SEVERE.
+	 * @param msg The string message (or a key in the message catalog).
+	 */
+	void log(Level level, String msg);
 	
     /**
      * Try to login the client to the server.

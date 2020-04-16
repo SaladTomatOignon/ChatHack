@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -35,7 +36,7 @@ public class ChatHackClient implements Client {
 	private final Map<String, ClientContext> privateClients; // Clients to whom a connection has been established. Key:login ; Value:ClientContext
 	private final Map<Integer, String> privatePendingClients; // Clients asking for connection and having a token ID but not yet connected. Key:ClientID ; Value:Login
 	private final Map<String, ClientContext> privateAskingClients; // Clients asking for connection and not having a token ID. Key:Login ; Value:ClientContext
-	private final Map<String, Queue<PublicMessageFromCliFrame>> privatePendingMessages; // Messages sent to a client whose communication has not yet been established. Key:login ; Value:Messages queue
+	private final Map<String, Queue<PrivateMessageFrame>> privatePendingMessages; // Messages sent to a client whose communication has not yet been established. Key:login ; Value:Messages queue
 	
 	private final String login;
 	private final String password;
@@ -47,6 +48,9 @@ public class ChatHackClient implements Client {
 	}
 	
 	public ChatHackClient(InetSocketAddress server, String login, String password) throws IOException {
+		logger.addHandler(new FileHandler("client_log.log"));
+		logger.setUseParentHandlers(false);
+		
 		this.publicServer = Objects.requireNonNull(server);
 		this.selector = Selector.open();
 		
@@ -181,14 +185,15 @@ public class ChatHackClient implements Client {
     		return;
     	}
     	
-    	logger.log(Level.INFO, "Connection with " + sc.getRemoteAddress() + " OK");
+    	logger.log(Level.INFO, "Connection with " + sc.getRemoteAddress() + " (" +
+    			(key.equals(publicServerChannelKey) ? "public server" : ctx.getLogin()) + ") established.");
     	
     	if ( key.equals(publicServerChannelKey) ) {											// Public server connection
     		/* Sending authentication request for public server */
     		ctx.queueMessage(new ConnectionFrame(login, password, !password.isEmpty()));
     	} else {																			// Private server connection
     		/* Sending authentication request for private server */
-    		ctx.queueMessage(new PrivateAuthCliFrame(ctx.getLogin(), ctx.getTokenId()));
+    		ctx.queueMessage(new PrivateAuthCliFrame(this.login, ctx.getTokenId()));
     		
     		/* Sending messages that were pending */
     		while ( !privatePendingMessages.get(ctx.getLogin()).isEmpty() ) {
@@ -253,7 +258,7 @@ public class ChatHackClient implements Client {
     		logger.log(Level.WARNING, login + " was already registered in private client's list");
     	}
     	
-    	logger.log(Level.INFO, "Communication established with " + login);
+    	logger.log(Level.INFO, "Private communication possible with " + login);
     }
     
     @Override
@@ -280,11 +285,12 @@ public class ChatHackClient implements Client {
     	}
     	
     	try {
+    		logger.log(Level.INFO, "Creating private server...");
         	privateServerSocketChannel = ServerSocketChannel.open();
         	privateServerSocketChannel.bind(null);
         	privateServerSocketChannel.configureBlocking(false);
         	privateServerSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-        	logger.log(Level.INFO, "Private server started on port " + privateServerSocketChannel.socket().getLocalPort()); // TODO Vérifier que le numéro de port est correct.
+        	logger.log(Level.INFO, "Private server started on port " + privateServerSocketChannel.socket().getLocalPort());
     	} catch (IOException e) {
     		logger.log(Level.SEVERE, "Error while creating private server", e);
     		privateServerSocketChannel = null;
@@ -318,12 +324,12 @@ public class ChatHackClient implements Client {
     	
     	int id;
     	do {
-    		id = Math.toIntExact(System.currentTimeMillis() % Integer.MAX_VALUE); // Assigning a random identifier.
+    		id = Math.toIntExact(System.currentTimeMillis() % Integer.MAX_VALUE); // Assigning a unique random identifier.
     	} while (isTokenIdExisting(id));
     	
     	privatePendingClients.put(id, login);
     	
-    	return new PrivateAnswerFromCliFrame(login, privateServerSocketChannel.socket().getLocalPort(), id); // TODO Vérifier que le numéro de port est correct.
+    	return new PrivateAnswerFromCliFrame(login, privateServerSocketChannel.socket().getLocalPort(), id);
     }
 
     /**
@@ -349,12 +355,17 @@ public class ChatHackClient implements Client {
      * @param login The login of the recipient client.
      */
     public void sendPrivateMessage(String msg, String login) {
+    	if ( login.equals(this.login) ) {
+    		System.out.println("You can't establish a private communication with yourself");
+    		return;
+    	}
+    	
     	if ( privateClients.containsKey(login) ) {									// If communication has already been established
     		ClientContext ctx = privateClients.get(login);
     		
     		ctx.queueMessage(new PrivateMessageFrame(msg));
     	} else if ( privatePendingMessages.containsKey(login) ) {					// If request for private communication has been sent but not yet established
-    		privatePendingMessages.get(login).add(new PublicMessageFromCliFrame(msg));
+    		privatePendingMessages.get(login).add(new PrivateMessageFrame(msg));
     	} else {																	// If request for private communication establishment has not been sent
     		ClientContext ctx = (ClientContext) publicServerChannelKey.attachment();
     		
@@ -379,8 +390,8 @@ public class ChatHackClient implements Client {
         		ctx.queueMessage(new PrivateRequestFrame(login));
         		
         		/* Queuing messages */
-        		privatePendingMessages.put(login, new LinkedList<PublicMessageFromCliFrame>());
-        		privatePendingMessages.get(login).add(new PublicMessageFromCliFrame(msg));	
+        		privatePendingMessages.put(login, new LinkedList<PrivateMessageFrame>());
+        		privatePendingMessages.get(login).add(new PrivateMessageFrame(msg));
     		}
     	}
     }
@@ -406,8 +417,19 @@ public class ChatHackClient implements Client {
     @Override
     public void addAskingClient(String login, ClientContext ctx) {
 		System.out.println(login + " wants to establish a communication with you.");
-		System.out.println("Reply with '/" + login + " no' if you want to refuse. Other replies will have the effect of accepting the communication.");
+		System.out.println("Reply with '/" + login + " no' if you want to refuse." +
+						   "Other replies to " + login + " will have the effect of accepting the communication.");
     	
     	privateAskingClients.put(login, ctx);
     }
+
+	@Override
+	public void log(Level level, String msg) {
+		logger.log(level, msg);
+	}
+
+	@Override
+	public void log(Level level, String msg, Throwable thrw) {
+		logger.log(level, msg, thrw);
+	}
 }

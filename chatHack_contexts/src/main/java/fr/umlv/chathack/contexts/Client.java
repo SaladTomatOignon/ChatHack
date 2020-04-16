@@ -2,10 +2,28 @@ package fr.umlv.chathack.contexts;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.logging.Level;
 
 public interface Client {
 	static final int BUFFER_SIZE = 1024;
 
+	/**
+	 * Log a message.
+	 * 
+	 * @param level One of the message level identifiers, e.g., SEVERE.
+	 * @param msg The string message (or a key in the message catalog).
+	 */
+	void log(Level level, String msg);
+	
+	/**
+	 * Log a message.
+	 * 
+	 * @param level One of the message level identifiers, e.g., SEVERE.
+	 * @param msg The string message (or a key in the message catalog).
+	 * @param thrw Throwable associated with log message.
+	 */
+	void log(Level level, String msg, Throwable thrw);
+	
     /**
      * Remove pending messages for 'login'.
      * 

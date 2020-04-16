@@ -9,15 +9,13 @@ import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import fr.umlv.chathack.resources.frames.ClientVisitor;
 import fr.umlv.chathack.resources.frames.Frame;
+import fr.umlv.chathack.resources.frames.InfoFrame;
 import fr.umlv.chathack.resources.readers.FrameReader;
 
 public class ClientContext implements ClientVisitor {
-	static private final Logger logger = Logger.getLogger(ClientContext.class.getName());
-	
     final private SelectionKey key;
     final private SocketChannel sc;
     final private Client client;
@@ -82,7 +80,7 @@ public class ClientContext implements ClientVisitor {
         try {
             sc.close();
         } catch (IOException e) {
-        	logger.log(Level.SEVERE, "Error while closing connection", e);
+        	log(Level.SEVERE, "Error while closing connection", e);
         }
     }
     
@@ -100,13 +98,19 @@ public class ClientContext implements ClientVisitor {
     		case DONE :
     			Frame frame = (Frame) freader.get();
     			freader.reset();
+    			log(Level.INFO, "Frame received : " + frame);
     			
     			frame.accept(this);
+    			
+    			if ( bbin.position() > 0 ) {
+    				processIn(); // We keep processing until there are bytes remaining in bbin.
+    			}
     			break;
     		case REFILL :
     			break;
     		case ERROR :
-    			// TODO : Gestion des erreurs lorsqu'un paquet reçu n'est pas conforme.
+    			queueMessage(new InfoFrame((byte) 1, "Invalid frame received, it has been ignored."));
+    			log(Level.WARNING, "Error while reading a frame ! Ignoring the frame.");
     			freader.reset();
     			break;
     	}
@@ -134,7 +138,7 @@ public class ClientContext implements ClientVisitor {
      *
      */
     private void processOut() {
-    	synchronized ( logger ) {
+    	synchronized ( key ) {
             while ( !queue.isEmpty() && bbout.remaining() >= queue.element().size() ) {
                 bbout.put(queue.remove().getBytes());
             }
@@ -164,10 +168,11 @@ public class ClientContext implements ClientVisitor {
      * @param frame The frame to add
      */
     public void queueMessage(Frame frame) {
-    	System.out.println("On envoie " + frame);
-    	synchronized ( logger ) {
+    	synchronized ( key ) {
     		queue.add(frame);
     	}
+    	
+    	log(Level.INFO, "Sending frame : " + frame);
         
         processOut();
         updateInterestOps();
@@ -227,7 +232,11 @@ public class ClientContext implements ClientVisitor {
     
 	@Override
 	public void log(Level level, String msg) {
-		logger.log(Objects.requireNonNull(level), Objects.requireNonNull(msg));
+		client.log(Objects.requireNonNull(level), Objects.requireNonNull(msg));
+	}
+	
+	public void log(Level level, String msg, Throwable thrw) {
+		client.log(Objects.requireNonNull(level), Objects.requireNonNull(msg), Objects.requireNonNull(thrw));
 	}
 
 	@Override

@@ -50,7 +50,7 @@ public class PrivateAnswerReader implements Reader {
 			status = strReader.process();
 			if (status == ProcessStatus.DONE) {
 				name = (String) strReader.get();
-				if (responceCode == 1) {
+				if (responceCode != 0) {
 					state = State.DONE;
 					return ProcessStatus.DONE;
 				}

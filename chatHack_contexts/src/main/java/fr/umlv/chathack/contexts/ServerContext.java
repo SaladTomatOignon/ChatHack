@@ -10,16 +10,14 @@ import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import fr.umlv.chathack.resources.frames.Frame;
+import fr.umlv.chathack.resources.frames.InfoFrame;
 import fr.umlv.chathack.resources.frames.PublicMessageFromServFrame;
 import fr.umlv.chathack.resources.frames.ServerVisitor;
 import fr.umlv.chathack.resources.readers.FrameReader;
 
 public class ServerContext implements ServerVisitor {
-	static private final Logger logger = Logger.getLogger(ServerContext.class.getName());
-	
     final private SelectionKey key;
     final private SocketChannel sc;
     final private Server server;
@@ -82,7 +80,7 @@ public class ServerContext implements ServerVisitor {
         try {
             sc.close();
         } catch (IOException e) {
-        	logger.log(Level.SEVERE, "Error while closing connection", e);
+        	log(Level.SEVERE, "Error while closing connection", e);
         }
     }
     
@@ -100,13 +98,19 @@ public class ServerContext implements ServerVisitor {
     		case DONE :
     			Frame frame = (Frame) freader.get();
     			freader.reset();
+    			log(Level.INFO, "Frame received : " + frame);
     			
     			frame.accept(this);
+    			
+    			if ( bbin.position() > 0 ) {
+    				processIn(); // We keep processing until there are bytes remaining in bbin.
+    			}
     			break;
     		case REFILL :
     			break;
     		case ERROR :
-    			// TODO : Gestion des erreurs lorsqu'un paquet re�u n'est pas conforme.
+    			queueMessage(new InfoFrame((byte) 1, "Invalid frame received, it has been ignored."));
+    			log(Level.WARNING, "Error while reading a frame ! Ignoring the frame.");
     			freader.reset();
     			break;
     	}
@@ -134,7 +138,7 @@ public class ServerContext implements ServerVisitor {
      *
      */
     private void processOut() {
-    	synchronized ( logger ) {
+    	synchronized ( key ) {
             while ( !queue.isEmpty() && bbout.remaining() >= queue.element().size() ) {
                 bbout.put(queue.remove().getBytes());
             }
@@ -164,9 +168,11 @@ public class ServerContext implements ServerVisitor {
      * @param frame The frame to add.
      */
     public void queueMessage(Frame frame) {
-    	synchronized ( logger ) {
+    	synchronized ( key ) {
     		queue.add(frame);
     	}
+    	
+    	log(Level.INFO, "Sending frame : " + frame);
         
         processOut();
         updateInterestOps();
@@ -176,6 +182,15 @@ public class ServerContext implements ServerVisitor {
     public String getLogin() {
     	return login;
     }
+    
+	@Override
+	public void log(Level level, String msg) {
+		server.log(Objects.requireNonNull(level), Objects.requireNonNull(msg));
+	}
+	
+	public void log(Level level, String msg, Throwable thrw) {
+		server.log(Objects.requireNonNull(level), Objects.requireNonNull(msg), Objects.requireNonNull(thrw));
+	}
     
     @Override
     public byte tryLogin(String login, String password) {

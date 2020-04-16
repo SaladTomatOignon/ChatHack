@@ -1,9 +1,28 @@
 package fr.umlv.chathack.contexts;
 
+import java.util.logging.Level;
+
 import fr.umlv.chathack.resources.frames.Frame;
 
 public interface Server {
 	static final int BUFFER_SIZE = 1024;
+	
+	/**
+	 * Log a message.
+	 * 
+	 * @param level One of the message level identifiers, e.g., SEVERE.
+	 * @param msg The string message (or a key in the message catalog).
+	 */
+	void log(Level level, String msg);
+	
+	/**
+	 * Log a message.
+	 * 
+	 * @param level One of the message level identifiers, e.g., SEVERE.
+	 * @param msg The string message (or a key in the message catalog).
+	 * @param thrw Throwable associated with log message.
+	 */
+	void log(Level level, String msg, Throwable thrw);
 	
 	/**
 	 * Broadcast a frame to every connected and authenticated clients.

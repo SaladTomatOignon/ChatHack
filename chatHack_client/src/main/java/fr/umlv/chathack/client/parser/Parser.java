@@ -26,7 +26,7 @@ public class Parser {
 			} else {
 				client.sendPublicMessage(line);
 			}
-		} catch (Exception e) {
+		} catch (IndexOutOfBoundsException e) {
 			throw new MalFormedFrameException();
 		}
 	}
