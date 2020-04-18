@@ -1,5 +1,6 @@
 package fr.umlv.chathack.contexts;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.logging.Level;
@@ -52,7 +53,7 @@ public interface Client {
      * @param login The login.
      * @param ctx The client Context to authenticate.
      */
-    public void tryAuthenticate(int id, String login, ClientContext ctx);
+    void tryAuthenticate(int id, String login, ClientContext ctx);
     
     /**
      * Add the given client to the "Asking clients list".<br>
@@ -62,5 +63,15 @@ public interface Client {
      * @param login The client's login.
      * @param ctx The client's context.
      */
-    public void addAskingClient(String login, ClientContext ctx);
+    void addAskingClient(String login, ClientContext ctx);
+    
+    /**
+     * Create a new file with the given name, and return a stream
+     * in which it's possible to write content.
+     * 
+     * @param fileName The file name.
+     * 
+     * @return A new stream opened for writing.
+     */
+    FileOutputStream createNewFile(String fileName);
 }

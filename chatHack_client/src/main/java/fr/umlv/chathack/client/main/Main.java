@@ -32,8 +32,8 @@ public class Main {
 			return;
 		}
 		
-		ChatHackClient client = args.length == 4 ? new ChatHackClient(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[3])
-												 : new ChatHackClient(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[3], args[4]);
+		ChatHackClient client = args.length == 4 ? new ChatHackClient(new InetSocketAddress(args[0], Integer.parseInt(args[1])), Paths.get(args[2]), args[3])
+												 : new ChatHackClient(new InetSocketAddress(args[0], Integer.parseInt(args[1])), Paths.get(args[2]), args[3], args[4]);
 		client.launch();
 		
 		UserInput input = new UserInput(client);

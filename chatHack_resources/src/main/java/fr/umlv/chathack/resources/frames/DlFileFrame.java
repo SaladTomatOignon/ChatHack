@@ -19,7 +19,7 @@ public class DlFileFrame implements Frame{
 	
 	@Override
 	public void accept(ClientVisitor client) {
-		System.out.println("fileId : " + fileId  + ", dataSize : " + dataSize + ", data : " + data);
+		client.downloadFile(fileId, data);
 	}
 
 	@Override

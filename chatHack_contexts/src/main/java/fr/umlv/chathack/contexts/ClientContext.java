@@ -5,11 +5,14 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.logging.Level;
 
+import fr.umlv.chathack.contexts.FileContext.State;
 import fr.umlv.chathack.resources.frames.ClientVisitor;
 import fr.umlv.chathack.resources.frames.Frame;
 import fr.umlv.chathack.resources.frames.InfoFrame;
@@ -25,6 +28,8 @@ public class ClientContext implements ClientVisitor {
     final private Queue<Frame> queue;
     final private FrameReader freader;
     
+    final private Map<Integer, FileContext> files;
+    
     private boolean closed;
     private String login; // The client login, may be null.
     private int tokenID; // The ID used to communicate the client, -1 if not assigned.
@@ -38,6 +43,8 @@ public class ClientContext implements ClientVisitor {
         this.bbout = ByteBuffer.allocate(Client.BUFFER_SIZE);
         this.queue = new LinkedList<>();
         this.freader = new FrameReader(bbin);
+        
+        this.files = new HashMap<>();
         
         this.closed = false;
         this.login = null;
@@ -230,6 +237,17 @@ public class ClientContext implements ClientVisitor {
     	return tokenID;
     }
     
+    /**
+     * Determines if this client is authenticated as a private client.
+     * In other words if this client is part of the private clients list,
+     * so we know his login and his ID.
+     * 
+     * @return True if this client is authenticated
+     */
+    private boolean isPrivateAuthenticated() {
+    	return !Objects.isNull(login) && tokenID != -1;
+    }
+    
 	@Override
 	public void log(Level level, String msg) {
 		client.log(Objects.requireNonNull(level), Objects.requireNonNull(msg));
@@ -256,7 +274,7 @@ public class ClientContext implements ClientVisitor {
 	
 	@Override
 	public void printPrivateMessage(String message) {
-		if ( Objects.isNull(login) || tokenID == -1 ) {
+		if ( isPrivateAuthenticated() ) {
 			// This client is not authenticated, his message is ignored.
 			return;
 		}
@@ -268,5 +286,40 @@ public class ClientContext implements ClientVisitor {
 	@Override
 	public void askForPrivateCommunication(String login) {
 		client.addAskingClient(Objects.requireNonNull(login), this);
+	}
+	
+	@Override
+	public void initFileDownload(String fileName, int fileSize, int fileID) {
+		if ( isPrivateAuthenticated() ) {
+			// This client is not authenticated, do nothing.
+			return;
+		}
+		
+		if ( files.containsKey(fileID) ) {
+			// TODO Fichier déjà en cours de téléchargement
+		} else {
+			files.put(fileID, new FileContext(fileSize, client.createNewFile(fileName)));
+		}
+	}
+	
+	@Override
+	public void downloadFile(int fileID, byte[] data) {
+		if ( isPrivateAuthenticated() ) {
+			// This client is not authenticated, do nothing.
+			return;
+		}
+		
+		var file = files.get(fileID);
+		
+		if ( file.state() == State.REFILL ) {
+			file.fillBuffer(data);
+		}
+		
+		if ( file.state() == State.FULL ) {
+			if ( !file.flush() ) {
+				// File is fully downloaded.
+				files.remove(fileID);
+			}
+		}
 	}
 }

@@ -19,7 +19,7 @@ public class InitSendFileFrame implements Frame{
 
 	@Override
 	public void accept(ClientVisitor client) {
-		System.out.println("fileName : " + fileName  + ", fileSize : " + fileSize + ", fileId : " + fileId);
+		client.initFileDownload(fileName, fileSize, fileId);
 	}
 
 	@Override

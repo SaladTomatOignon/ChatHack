@@ -22,7 +22,11 @@ public class Parser {
 				
 				client.sendPrivateMessage(msg, recipientClient);
 			} else if ( line.startsWith("@") ) {
-				throw new UnsupportedOperationException(); // TODO
+				String[] sequences = line.split(" ", 2);
+				String recipientClient = sequences[0].substring(1);
+				String fileName = sequences[1];
+				
+				client.sendFile(fileName, recipientClient);
 			} else {
 				client.sendPublicMessage(line);
 			}

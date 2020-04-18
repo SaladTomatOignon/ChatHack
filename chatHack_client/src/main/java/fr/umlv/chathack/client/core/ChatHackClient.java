@@ -1,5 +1,6 @@
 package fr.umlv.chathack.client.core;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
@@ -7,6 +8,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -40,14 +42,15 @@ public class ChatHackClient implements Client {
 	
 	private final String login;
 	private final String password;
+	private final Path filesRepertory;
     
     private final Thread mainThread;
 	
-	public ChatHackClient(InetSocketAddress server, String login) throws IOException {
-		this(server, login, "");
+	public ChatHackClient(InetSocketAddress server, Path filesRepertory, String login) throws IOException {
+		this(server, filesRepertory, login, "");
 	}
 	
-	public ChatHackClient(InetSocketAddress server, String login, String password) throws IOException {
+	public ChatHackClient(InetSocketAddress server, Path filesRepertory, String login, String password) throws IOException {
 		logger.addHandler(new FileHandler("client_log.log"));
 		logger.setUseParentHandlers(false);
 		
@@ -59,6 +62,7 @@ public class ChatHackClient implements Client {
 		this.privateAskingClients = new HashMap<>();
 		this.privatePendingMessages = new HashMap<>();
 		
+		this.filesRepertory = Objects.requireNonNull(filesRepertory);
 		this.login = Objects.requireNonNull(login);
 		this.password = Objects.requireNonNull(password);
 		
@@ -396,6 +400,34 @@ public class ChatHackClient implements Client {
     	}
     }
     
+    /**
+     * Send a file to the recipient client, chunk by chunk.
+     * 
+     * @param fileName The name of the file in the files directory.
+     * @param login The login of the recipient client.
+     */
+    public void sendFile(String fileName, String login) {
+    	/**
+    	 * TODO : Faire l'envoi de fichier. Eventuellement lancer un nouveau thread qui le fait, pour ne pas bloquer le reste.
+    	 * Les infos :
+    	 * context du client à qui envoyer le fichier : ClientContext ctx = privateClients.get(login);
+    	 * Envoi de la frame au client : ctx.queueMessage(frame).
+    	 * 
+    	 * D'abord vérifier si le login fait partis des clients connectés : privateClients.contains(login)
+    	 * Aussi vérifier si le fichier existe bien dans le repertoire des fichiers 'filesRepertory'.
+    	 */
+    }
+    
+	@Override
+	public void log(Level level, String msg) {
+		logger.log(level, msg);
+	}
+
+	@Override
+	public void log(Level level, String msg, Throwable thrw) {
+		logger.log(level, msg, thrw);
+	}
+    
     @Override
     public void connectToPrivateServer(InetSocketAddress server, String login, int tokenID) throws IOException {
 		SocketChannel sc = SocketChannel.open();
@@ -422,14 +454,12 @@ public class ChatHackClient implements Client {
     	
     	privateAskingClients.put(login, ctx);
     }
-
-	@Override
-	public void log(Level level, String msg) {
-		logger.log(level, msg);
-	}
-
-	@Override
-	public void log(Level level, String msg, Throwable thrw) {
-		logger.log(level, msg, thrw);
-	}
+    
+    @Override
+    public FileOutputStream createNewFile(String fileName) {
+    	/* TODO Créer un fichier unique (Faire attention aux noms dupliqués)
+    	 * dans le répertoire 'filesRepertory'.
+    	 */
+    	return null;
+    }
 }

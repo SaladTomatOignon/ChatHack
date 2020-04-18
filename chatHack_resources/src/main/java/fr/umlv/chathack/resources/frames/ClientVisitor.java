@@ -53,4 +53,21 @@ public interface ClientVisitor {
 	 * @param login The client's login.
 	 */
 	void askForPrivateCommunication(String login);
+	
+	/**
+	 * Initiates a file download, to which a unique identifier is assigned.
+	 * 
+	 * @param fileName The file name.
+	 * @param fileSize The full size of the file.
+	 * @param fileID The file identifier.
+	 */
+	void initFileDownload(String fileName, int fileSize, int fileID);
+	
+	/**
+	 * Download a file, chunk by chunk.
+	 * 
+	 * @param fileID The file identifier.
+	 * @param data The 'chunk data' of the file.
+	 */
+	void downloadFile(int fileID, byte[] data);
 }
