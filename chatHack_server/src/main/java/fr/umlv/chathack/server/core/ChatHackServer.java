@@ -16,16 +16,21 @@ import java.util.logging.Logger;
 
 import fr.umlv.chathack.contexts.Server;
 import fr.umlv.chathack.contexts.ServerContext;
+import fr.umlv.chathack.resources.frames.AuthBddFrame;
+import fr.umlv.chathack.resources.frames.ConnectionAnswerFrame;
 import fr.umlv.chathack.resources.frames.Frame;
-import fr.umlv.chathack.server.database.DataBase;
+import fr.umlv.chathack.resources.frames.RequestLoginExistFrame;
+import fr.umlv.chathack.resources.readers.BddReader;
 
 public class ChatHackServer implements Server {
-	static private Logger logger = Logger.getLogger(ChatHackServer.class.getName());
+	static private final Logger logger = Logger.getLogger(ChatHackServer.class.getName());
+	static private final int DB_PORT = 7777;
 	
     private final ServerSocketChannel serverSocketChannel;
     private final Selector selector;
+    private SelectionKey dbServerKey;
     
-    private final DataBase dataBase;
+    private final Map<Long, ServerContext> pendingClients; // Clients asking for authentication but not yet authenticated. Key:requestID ; Value:ClientContext
     private final Map<String, ServerContext> authenticatedClients;
 	
 	public ChatHackServer(int port) throws IOException {
@@ -37,13 +42,14 @@ public class ChatHackServer implements Server {
         this.serverSocketChannel.configureBlocking(false);
         this.selector = Selector.open();
         
-        this.dataBase = DataBase.connect();
+        this.pendingClients = new HashMap<>();
         this.authenticatedClients = new HashMap<>();
 	}
 	
     public void launch() throws IOException {
     	logger.log(Level.INFO, "Server started on port " + serverSocketChannel.socket().getLocalPort());
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+		connectToDatabase();
 		
 		while ( !Thread.interrupted() ) {
 			try {
@@ -52,6 +58,21 @@ public class ChatHackServer implements Server {
 				throw tunneled.getCause();
 			}
 		}
+    }
+    
+    /**
+     * Initiates the connection to the database server in non blocking mode,
+     * opened in local on port 'DB_PORT'.
+     * 
+     * @throws IOException If connection failed.
+     */
+    private void connectToDatabase() throws IOException {
+		SocketChannel sc = SocketChannel.open();
+		sc.configureBlocking(false);
+		sc.connect(new InetSocketAddress("localhost", DB_PORT));
+		
+		dbServerKey = sc.register(selector, SelectionKey.OP_CONNECT);
+		dbServerKey.attach(new ServerContext(dbServerKey, this, BddReader.class));
     }
     
 	/**
@@ -63,6 +84,9 @@ public class ChatHackServer implements Server {
 	 */
 	private void treatKey(SelectionKey key) {
 		try {
+			if (key.isValid() && key.isConnectable()) {
+				doConnect(key);
+			}
 			if (key.isValid() && key.isAcceptable()) {
 				doAccept(key);
 			}
@@ -82,6 +106,30 @@ public class ChatHackServer implements Server {
 		}
 	}
 	
+	/**
+     * Finishes the process of connection with database server if possible.<br>
+     * 
+	 * @param key The selection key corresponding to the server database.
+	 * 
+	 * @throws IOException 
+	 */
+    private void doConnect(SelectionKey key) throws IOException {
+    	SocketChannel sc = (SocketChannel) key.channel();
+    	
+    	if ( !sc.finishConnect() ) {
+    		return;
+    	}
+    	
+    	log(Level.INFO, "Connection with database server established");
+	}
+
+	/**
+     * Accept the client to the public server, and assign him its Context.
+     * 
+     * @param key The key associated to the public server
+     * 
+     * @throws IOException
+     */
     private void doAccept(SelectionKey key) throws IOException {
         SocketChannel sc = serverSocketChannel.accept();
         
@@ -115,6 +163,18 @@ public class ChatHackServer implements Server {
         }
     }
     
+    /**
+     * Add the client to the authenticated list.
+     * 
+     * @param login The login's client.
+     * @param ctx The client's context.
+     */
+    private void authenticateClient(String login, ServerContext ctx) {
+    	logger.log(Level.INFO, "Authenticating " + login + " to the server.");
+    	
+    	authenticatedClients.put(login, ctx);
+    }
+    
 	@Override
 	public void broadcast(Frame frame) {
 		logger.log(Level.INFO, "Broadcasting a frame : " + frame);
@@ -136,23 +196,54 @@ public class ChatHackServer implements Server {
 		
 		ctx.queueMessage(frame);
 	}
-    
-    @Override
-    public boolean isRegistered(String login, String password) {
-    	return dataBase.isRegistered(login, password);
-    }
-    
-    @Override
-    public void authenticateClient(String login, ServerContext ctx) {
-    	logger.log(Level.INFO, "Authenticating " + login + " to the server.");
-    	
-    	authenticatedClients.put(login, ctx);
-    }
-    
-    @Override
-    public boolean clientAuthenticated(String login) {
-    	return authenticatedClients.containsKey(login);
-    }
+	
+	@Override
+	public void sendAuthRequest(String login, String password, ServerContext ctx) {
+		ServerContext dbCtx = (ServerContext) dbServerKey.attachment();
+		
+		long id = System.currentTimeMillis(); // Generating a unique random identifier.
+		
+		pendingClients.put(id, ctx);
+		dbCtx.queueMessage(new AuthBddFrame(id, login, password));
+	}
+
+	@Override
+	public void sendAuthRequest(String login, ServerContext ctx) {
+		ServerContext dbCtx = (ServerContext) dbServerKey.attachment();
+		
+		long id = System.currentTimeMillis(); // Generating a unique random identifier.
+		
+		pendingClients.put(id, ctx);
+		dbCtx.queueMessage(new RequestLoginExistFrame(id, login));
+	}
+	
+	@Override
+	public void tryAuthenticate(long id, boolean positiveAnswer) {
+		if ( !pendingClients.containsKey(id) ) {
+			return;
+		}
+		
+		ServerContext ctx = pendingClients.get(id);
+		pendingClients.remove(id);
+		
+		if ( positiveAnswer ) {
+			if ( ctx.isGuest() ) {
+				// It means that the login with which the client wanted to identify already exists in the database, so we refuse the authentication.
+				ctx.queueMessage(new ConnectionAnswerFrame((byte) 2));
+				return;
+			}
+		} else {
+			if ( !ctx.isGuest() ) {
+				// It means that the pair login/password was invalid.
+				ctx.queueMessage(new ConnectionAnswerFrame((byte) 1));
+				return;
+			}
+		}
+		
+		ctx.confirmAuthentication();
+		authenticateClient(ctx.getLogin(), ctx);
+		ctx.queueMessage(new ConnectionAnswerFrame((byte) 0));
+	}
 
 	@Override
 	public void log(Level level, String msg) {

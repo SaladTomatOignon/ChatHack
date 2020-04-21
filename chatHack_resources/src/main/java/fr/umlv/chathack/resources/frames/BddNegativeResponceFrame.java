@@ -9,7 +9,7 @@ public class BddNegativeResponceFrame implements Frame{
 
 	@Override
 	public void accept(ServerVisitor server) {
-		// TODO
+		server.answerFromDatabase(id, false);
 	}
 
 	@Override

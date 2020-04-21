@@ -16,6 +16,7 @@ import fr.umlv.chathack.resources.frames.InfoFrame;
 import fr.umlv.chathack.resources.frames.PublicMessageFromServFrame;
 import fr.umlv.chathack.resources.frames.ServerVisitor;
 import fr.umlv.chathack.resources.readers.FrameReader;
+import fr.umlv.chathack.resources.readers.Reader;
 
 public class ServerContext implements ServerVisitor {
     final private SelectionKey key;
@@ -25,12 +26,18 @@ public class ServerContext implements ServerVisitor {
     final private ByteBuffer bbin;
     final private ByteBuffer bbout;
     final private Queue<Frame> queue;
-    final private FrameReader freader;
+    final private Reader freader;
     
     private String login;
+    private String pendingLogin; // The login whose authentication has not be made.
+    private boolean guest; // The client is a guest if he is not register by the database (he does not have password).
     private boolean closed;
 	
     public ServerContext(SelectionKey key, Server server) {
+    	this(key, server, FrameReader.class);
+    }
+    
+    public <T extends Reader> ServerContext(SelectionKey key, Server server, Class<T> reader) {
         this.key = key;
         this.sc = (SocketChannel) key.channel();
         this.server = server;
@@ -38,9 +45,18 @@ public class ServerContext implements ServerVisitor {
         this.bbin = ByteBuffer.allocate(Server.BUFFER_SIZE);
         this.bbout = ByteBuffer.allocate(Server.BUFFER_SIZE);
         this.queue = new LinkedList<>();
-        this.freader = new FrameReader(bbin);
+        
+        Reader tmpReader = null;
+        try {
+        	tmpReader = reader.getConstructor(ByteBuffer.class).newInstance(bbin);
+		} catch (Exception e) {
+			tmpReader = null;
+			log(Level.SEVERE, "Error while instanciating the frame reader", e);
+		}
+        this.freader = tmpReader;
         
         this.login = null;
+        this.pendingLogin = null;
         this.closed = false;
     }
     
@@ -178,6 +194,25 @@ public class ServerContext implements ServerVisitor {
         updateInterestOps();
     }
     
+    /**
+     * Confirm the login of the client.
+     * 
+     */
+    public void confirmAuthentication() {
+    	login = pendingLogin;
+    	pendingLogin = null;
+    }
+    
+    /**
+     * Determines if this client is a guest
+     * (i.e if he is not register in the database and he does not have password).
+     * 
+     * @return True if the client is guest.
+     */
+    public boolean isGuest() {
+    	return guest;
+    }
+    
     @Override
     public String getLogin() {
     	return login;
@@ -193,27 +228,22 @@ public class ServerContext implements ServerVisitor {
 	}
     
     @Override
-    public byte tryLogin(String login, String password) {
-    	if ( !server.isRegistered(login, password) ) {
-    		return 1;
-    	}
-    	
-    	server.authenticateClient(login, this);
-    	this.login = login;
-    	
-    	return 0;
+    public void tryLogin(String login, String password) {
+    	server.sendAuthRequest(Objects.requireNonNull(login), Objects.requireNonNull(password), this);
+    	pendingLogin = login;
+    	guest = false;
     }
     
     @Override
-    public byte tryLogin(String login) {
-    	if ( server.clientAuthenticated(login) ) {
-    		return 2;
-    	}
-    	
-    	server.authenticateClient(login, this);
-    	this.login = login;
-    	
-    	return 0;
+    public void tryLogin(String login) {
+    	server.sendAuthRequest(Objects.requireNonNull(login), this);
+    	pendingLogin = login;
+    	guest = true;
+    }
+    
+    @Override
+    public void answerFromDatabase(long id, boolean positiveAnswer) {
+    	server.tryAuthenticate(id, positiveAnswer);
     }
 
 	@Override
