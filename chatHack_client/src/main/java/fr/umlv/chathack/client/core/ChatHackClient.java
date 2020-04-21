@@ -1,5 +1,7 @@
 package fr.umlv.chathack.client.core;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -9,6 +11,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -460,6 +463,33 @@ public class ChatHackClient implements Client {
     	/* TODO Créer un fichier unique (Faire attention aux noms dupliqués)
     	 * dans le répertoire 'filesRepertory'.
     	 */
-    	return null;
+    	File dir = new File("filesRepertory");
+		var pathNumber = 1;
+		if (!dir.exists())
+			dir.mkdirs();
+		File f = new File(fileName);
+		try {
+			// Create a new file like fileName (i) if already exist
+			while(!f.createNewFile()) {
+				var splited = fileName.split("\\.");
+				if (splited.length >= 2) {
+					splited[splited.length - 1 ] = " (" + pathNumber + ")." + splited[splited.length - 1 ];
+				}else {
+					splited[0] = splited[0] +  " (" + pathNumber +")";
+				}
+				var newPath = String.join("", splited);
+				f = new File(newPath);
+				pathNumber++;
+			}
+		} catch (IOException e) {
+			System.err.println("File can't be created");
+		}
+    	try {
+			return new FileOutputStream(f.getPath(), true); // Create the file in append mode
+		} catch (FileNotFoundException e) {
+			System.err.println("Probleme while creating FileOutputStream");
+			return null; //Should never happened 
+		}
+    	
     }
 }
