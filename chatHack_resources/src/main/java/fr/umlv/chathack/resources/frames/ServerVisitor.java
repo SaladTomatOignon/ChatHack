@@ -16,24 +16,30 @@ public interface ServerVisitor {
 	
     /**
      * Try to login the client to the server.
-     * It succeed if the logins are registered by the server.
+     * It succeeds if the logins are registered in the database.
      * 
      * @param login
      * @param password
-     * 
-     * @return 0 if login succeed or 1 if it failed.
      */
-    byte tryLogin(String login, String password);
+    void tryLogin(String login, String password);
     
     /**
      * Try to login the client to the server.
-     * It succeed if the given login is not already authenticated by the server.
+     * It succeeds if the given login is not already authenticated by the server
+     * and does not exists in the database.
      * 
      * @param login
-     * 
-     * @return 0 if login succeed or 2 if it failed.
      */
-    byte tryLogin(String login);
+    void tryLogin(String login);
+    
+    /**
+     * Authenticates or deny the authentication of a client
+     * according to the database answer.
+     * 
+     * @param id The identifier of the request to the database.
+     * @param positiveAnswer The response, True if positive, False if negative.
+     */
+    void answerFromDatabase(long id, boolean positiveAnswer);
     
     /**
      * Broadcast a public message to the server, so every connected client

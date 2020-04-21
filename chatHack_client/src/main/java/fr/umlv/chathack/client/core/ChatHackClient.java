@@ -268,19 +268,6 @@ public class ChatHackClient implements Client {
     	logger.log(Level.INFO, "Private communication possible with " + login);
     }
     
-    @Override
-    public void tryAuthenticate(int id, String login, ClientContext ctx) {
-    	if ( privatePendingClients.containsKey(id) && privatePendingClients.get(id).equals(login) ) {
-    		addPrivateClient(privatePendingClients.get(id), ctx);
-    		privatePendingClients.remove(id);
-    		
-    		ctx.setLogin(login);
-    		ctx.setTokenId(id);
-    	} else {
-    		logger.log(Level.WARNING, "Someone tried with failure to authenticate with login " + login);
-    	}
-    }
-    
     /**
      * Creates the private server and register it to the selector.
      * 
@@ -337,6 +324,19 @@ public class ChatHackClient implements Client {
     	privatePendingClients.put(id, login);
     	
     	return new PrivateAnswerFromCliFrame(login, privateServerSocketChannel.socket().getLocalPort(), id);
+    }
+    
+    @Override
+    public void tryAuthenticate(int id, String login, ClientContext ctx) {
+    	if ( privatePendingClients.containsKey(id) && privatePendingClients.get(id).equals(login) ) {
+    		addPrivateClient(privatePendingClients.get(id), ctx);
+    		privatePendingClients.remove(id);
+    		
+    		ctx.setLogin(login);
+    		ctx.setTokenId(id);
+    	} else {
+    		logger.log(Level.WARNING, "Someone tried with failure to authenticate with login " + login);
+    	}
     }
 
     /**

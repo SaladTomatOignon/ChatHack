@@ -10,7 +10,7 @@ public class BddPositiveResponceFrame implements Frame{
 
 	@Override
 	public void accept(ServerVisitor server) {
-		// TODO
+		server.answerFromDatabase(id, true);
 	}
 
 	@Override

@@ -41,28 +41,31 @@ public interface Server {
      */
 	void sendFrame(Frame frame, String dest) throws IllegalArgumentException;
 	
-    /**
-     * Check if the user is registered in the server.
-     * 
-     * @param login
-     * @param password
-     * @return True if the user's logins are valid.
-     */
-	boolean isRegistered(String login, String password);
+	/**
+	 * Send a request to the database server in order to determinate if
+	 * the pair login/password is registered in the database.
+	 * 
+	 * @param login
+	 * @param password
+	 * @param ctx The client context
+	 */
+	void sendAuthRequest(String login, String password, ServerContext ctx);
 	
-    /**
-     * Add the client to the authenticated list.
-     * 
-     * @param login The login's client.
-     * @param ctx The client's context.
-     */
-	void authenticateClient(String login, ServerContext ctx);
+	/**
+	 * Sends a request to the database server in order to determinate if
+	 * the the login exists in the database.
+	 * 
+	 * @param login
+	 * @param ctx The client context
+	 */
+	void sendAuthRequest(String login, ServerContext ctx);
 	
-    /**
-     * Determine if the client with the given login is connected and authenticated to the server or not.
-     * 
-     * @param login
-     * @return True if the client is connected and authenticated.
-     */
-	boolean clientAuthenticated(String login);
+	/**
+	 * Try to authenticate the client corresponding to the given ID according
+	 * to the database response.
+	 * 
+	 * @param id The client's identifier
+	 * @param positiveAnswer The database response, True if positive, False if negative.
+	 */
+	void tryAuthenticate(long id, boolean positiveAnswer);
 }
