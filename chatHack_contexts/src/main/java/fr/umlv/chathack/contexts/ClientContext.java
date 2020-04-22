@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import fr.umlv.chathack.contexts.FileContext.State;
 import fr.umlv.chathack.resources.frames.ClientVisitor;
@@ -19,6 +20,8 @@ import fr.umlv.chathack.resources.frames.InfoFrame;
 import fr.umlv.chathack.resources.readers.FrameReader;
 
 public class ClientContext implements ClientVisitor {
+	static final private Logger logger = Logger.getLogger(ClientContext.class.getName());
+	
     final private SelectionKey key;
     final private SocketChannel sc;
     final private Client client;
@@ -297,6 +300,8 @@ public class ClientContext implements ClientVisitor {
 		
 		if ( files.containsKey(fileID) ) {
 			// TODO Fichier déjà en cours de téléchargement
+			logger.info("File already downloading");
+			return ;
 		} else {
 			files.put(fileID, new FileContext(fileSize, client.createNewFile(fileName)));
 		}

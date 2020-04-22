@@ -1,11 +1,13 @@
 package fr.umlv.chathack.client.core;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -24,6 +26,8 @@ import java.util.logging.Logger;
 import fr.umlv.chathack.contexts.Client;
 import fr.umlv.chathack.contexts.ClientContext;
 import fr.umlv.chathack.resources.frames.ConnectionFrame;
+import fr.umlv.chathack.resources.frames.DlFileFrame;
+import fr.umlv.chathack.resources.frames.InitSendFileFrame;
 import fr.umlv.chathack.resources.frames.PrivateAnswerFromCliFrame;
 import fr.umlv.chathack.resources.frames.PrivateAuthCliFrame;
 import fr.umlv.chathack.resources.frames.PrivateMessageFrame;
@@ -46,6 +50,7 @@ public class ChatHackClient implements Client {
 	private final String login;
 	private final String password;
 	private final Path filesRepertory;
+	private int fileId = 0;
     
     private final Thread mainThread;
 	
@@ -408,6 +413,7 @@ public class ChatHackClient implements Client {
      * 
      * @param fileName The name of the file in the files directory.
      * @param login The login of the recipient client.
+     * @throws FileNotFoundException  it should never happened
      */
     public void sendFile(String fileName, String login) {
     	/**
@@ -419,6 +425,54 @@ public class ChatHackClient implements Client {
     	 * D'abord vérifier si le login fait partis des clients connectés : privateClients.contains(login)
     	 * Aussi vérifier si le fichier existe bien dans le repertoire des fichiers 'filesRepertory'.
     	 */
+    	if (!privateClients.containsKey(login)) {
+    		logger.info("Connection must be open to send file");
+    		return ;
+    	}
+    	
+    	var path = "filesRepertory/"+fileName;
+    	var f = new File(path);
+    	if (!f.exists()) {
+    		logger.info("File : " + path + " must exist to be send.");
+    		return ;
+    	}
+    	if (f.length() > Integer.MAX_VALUE) {
+    		logger.info("File too big to be send");
+    		return ;
+    	}
+    	var currentId = fileId;
+    	fileId++;
+    	var ctx = privateClients.get(login);
+    	ctx.queueMessage(new InitSendFileFrame(fileName, (int) f.length(), currentId)); 
+    	new Thread(() ->{
+    		try (FileInputStream ios = new FileInputStream("filesRepertory/" + fileName)) {
+    			byte[] buffer = new byte[1024];
+        		var read = 0;
+        		var cpt = 0;
+        		try {
+    				while ((read = ios.read(buffer)) != -1) {
+    					ctx.queueMessage(new DlFileFrame(currentId, read, buffer)); 
+    					cpt++;
+    					if (cpt%20 == 0) {
+    						try {
+								Thread.sleep(1000);
+							} catch (InterruptedException e) {
+								return ;
+							}
+    					}
+    				}
+    			} catch (IOException e) {
+    				logger.info("problem while sending file");
+    	    		return ;
+    			}
+    		} catch (FileNotFoundException e1) {
+    			System.err.println("File not fount"); //this should never happened 
+    			return ;
+    		} catch (IOException e2) {
+				System.err.println("problem while closing FileInputStream");
+			}
+    		
+    	}).start();
     }
     
 	@Override

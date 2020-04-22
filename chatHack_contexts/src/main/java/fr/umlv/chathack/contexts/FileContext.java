@@ -1,6 +1,7 @@
 package fr.umlv.chathack.contexts;
 
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -104,7 +105,20 @@ public class FileContext {
 		 * 
 		 * Renvoyer faux quand tout le contenu du fichier a été transféré.
 		 */
+		data.flip();
+		byte[] arr = new byte[data.remaining()];
+		data.get(arr);
+		try {
+			outputStream.write(arr);
+		} catch (IOException e) {
+			System.err.println("Problem during the writing of the file");
+			return true;
+		}
+		data.clear();
+		overageData.flip();
+		data.put(overageData);
+		overageData.clear();
 		
-		return true;
+		return false;
 	}
 }
