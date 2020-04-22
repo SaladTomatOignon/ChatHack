@@ -430,7 +430,7 @@ public class ChatHackClient implements Client {
     		return ;
     	}
     	
-    	var path = "filesRepertory/"+fileName;
+    	var path = filesRepertory + "/" + fileName;
     	var f = new File(path);
     	if (!f.exists()) {
     		logger.info("File : " + path + " must exist to be send.");
@@ -445,7 +445,7 @@ public class ChatHackClient implements Client {
     	var ctx = privateClients.get(login);
     	ctx.queueMessage(new InitSendFileFrame(fileName, (int) f.length(), currentId)); 
     	new Thread(() ->{
-    		try (FileInputStream ios = new FileInputStream("filesRepertory/" + fileName)) {
+    		try (FileInputStream ios = new FileInputStream(filesRepertory + "/" + fileName)) {
     			byte[] buffer = new byte[1024];
         		var read = 0;
         		var cpt = 0;
@@ -517,15 +517,16 @@ public class ChatHackClient implements Client {
     	/* TODO Créer un fichier unique (Faire attention aux noms dupliqués)
     	 * dans le répertoire 'filesRepertory'.
     	 */
-    	File dir = new File("filesRepertory");
+    	File dir = new File(filesRepertory.toString());
 		var pathNumber = 1;
 		if (!dir.exists())
 			dir.mkdirs();
-		File f = new File(fileName);
+		var path = filesRepertory + "/" +  fileName;
+		File f = new File(path);
 		try {
 			// Create a new file like fileName (i) if already exist
 			while(!f.createNewFile()) {
-				var splited = fileName.split("\\.");
+				var splited = path.split("\\.");
 				if (splited.length >= 2) {
 					splited[splited.length - 1 ] = " (" + pathNumber + ")." + splited[splited.length - 1 ];
 				}else {
