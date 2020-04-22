@@ -59,7 +59,8 @@ public class InitSendFileReader implements Reader{
 		case WAITING_FILE_ID:
 			if (bb.remaining() >= Integer.BYTES) {
 				fileId = bb.getInt();
-				state = State.WAITING_FILE_ID;
+				state = State.DONE;
+				return ProcessStatus.DONE;
 			}else {
 				return ProcessStatus.REFILL;
 			}
