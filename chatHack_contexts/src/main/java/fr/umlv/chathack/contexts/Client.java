@@ -6,7 +6,7 @@ import java.net.InetSocketAddress;
 import java.util.logging.Level;
 
 public interface Client {
-	static final int BUFFER_SIZE = 1024;
+	static final int BUFFER_SIZE = 2048;
 
 	/**
 	 * Log a message.
@@ -31,6 +31,13 @@ public interface Client {
      * @param login The client login to remove pending messages.
      */
 	void clearPendingMessages(String login);
+	
+    /**
+     * Remove pending files for 'login'.
+     * 
+     * @param login The client login to remove pending files.
+     */
+	void clearPendingFiles(String login);
 	
     /**
      * Connect the client to the server corresponding to another client's private server.<br>

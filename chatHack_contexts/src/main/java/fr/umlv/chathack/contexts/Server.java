@@ -5,7 +5,7 @@ import java.util.logging.Level;
 import fr.umlv.chathack.resources.frames.Frame;
 
 public interface Server {
-	static final int BUFFER_SIZE = 1024;
+	static final int BUFFER_SIZE = 2048;
 	
 	/**
 	 * Log a message.

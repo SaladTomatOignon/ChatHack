@@ -33,9 +33,10 @@ public class ConnectionAnswerFrame implements Frame {
 	@Override
 	public void accept(ClientVisitor client) {
 		switch ( responceCode ) {
-			case 0 : System.out.println("Connexion acceptée par le serveur"); break;
-			case 1 : System.out.println("Connexion refusée par le serveur : Identifiants invalides"); break;
-			case 2 : System.out.println("Connexion refusée par le serveur : Login déjà existant"); break;
+			case 0 : System.out.println("Connection accepted by the server"); break;
+			case 1 : System.out.println("Connection refused by the server : Invalid logins"); break;
+			case 2 : System.out.println("Connection refused by the server : Login already existing"); break;
+			case 3 : System.out.println("Connection refused by the server : The server does not allow new clients"); break;
 		}
 	}
 

@@ -2,6 +2,7 @@ package fr.umlv.chathack.server.main;
 
 import java.io.IOException;
 
+import fr.umlv.chathack.server.core.UserInput;
 import fr.umlv.chathack.server.core.ChatHackServer;
 
 public class Main {
@@ -35,13 +36,16 @@ public class Main {
 		}
 		
 		if ( !isPortValid(args[0]) ) {
-			System.out.println("Port number must be between 1 and 65535 inclusiv");
+			System.out.println("Port number must be between 1 and 65535 inclusive");
 			return;
 		}
 		
 		int port = Integer.parseInt(args[0]);
 		ChatHackServer server = new ChatHackServer(port);
 		server.launch();
+		
+		UserInput input = new UserInput(server);
+		input.interact();
 	}
 
 }

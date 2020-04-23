@@ -32,33 +32,75 @@ public class ChatHackServer implements Server {
     
     private final Map<Long, ServerContext> pendingClients; // Clients asking for authentication but not yet authenticated. Key:requestID ; Value:ClientContext
     private final Map<String, ServerContext> authenticatedClients;
+    
+    private final Thread mainThread;
+    private boolean acceptingNewClients;
 	
 	public ChatHackServer(int port) throws IOException {
 		logger.addHandler(new FileHandler("server_log.log"));
 		logger.setUseParentHandlers(false);
 		
+		this.selector = Selector.open();
         this.serverSocketChannel = ServerSocketChannel.open();
         this.serverSocketChannel.bind(new InetSocketAddress(port));
         this.serverSocketChannel.configureBlocking(false);
-        this.selector = Selector.open();
+        this.serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
         
         this.pendingClients = new HashMap<>();
         this.authenticatedClients = new HashMap<>();
+        
+        this.mainThread = new Thread(this::run);
+        this.acceptingNewClients = true;
 	}
 	
     public void launch() throws IOException {
+		if ( mainThread.isAlive() ) {
+			throw new IllegalStateException("Server is already running");
+		}
+		try {
+			init();
+			mainThread.start();
+		} catch (UncheckedIOException tunneled) {
+			// C'est ici qu'on pourrait éventuellement essayer de relancer la connexion au lieu de propager l'exception
+			throw tunneled.getCause();
+		}
+    }
+    
+    /**
+     * Initiates connection to the database server.
+     * 
+     * @throws IOException
+     */
+    private void init() throws IOException {
+    	connectToDatabase();
+    }
+    
+	/**
+	 * Start treating keys in the selector while the associated thread is uninterrupted.
+	 */
+    private void run() {
     	logger.log(Level.INFO, "Server started on port " + serverSocketChannel.socket().getLocalPort());
-		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-		connectToDatabase();
-		
+    	System.out.println("Server started on port " + serverSocketChannel.socket().getLocalPort());
+    	
 		while ( !Thread.interrupted() ) {
 			try {
 				selector.select(this::treatKey);
-			} catch (UncheckedIOException tunneled) {
-				throw tunneled.getCause();
+			} catch (IOException ioe) {
+				throw new UncheckedIOException(ioe);
 			}
 		}
     }
+    
+	/**
+	 * Stop the client thread.<br>
+	 * It does not reset client parameters (buffers, queue and frame reader)
+	 * 
+	 */
+	public void stop() {
+		logger.log(Level.INFO, "Stopping the main thread");
+		
+		mainThread.interrupt();
+	}
     
     /**
      * Initiates the connection to the database server in non blocking mode,
@@ -175,6 +217,33 @@ public class ChatHackServer implements Server {
     	authenticatedClients.put(login, ctx);
     }
     
+    /**
+     * Prints informations about the current state of the server.
+     */
+    public void showInfos() {
+    	System.out.println("There are " + authenticatedClients.size() + " clients authenticated to the server :");
+    	authenticatedClients.keySet().forEach(login -> System.out.println("- " + login));
+    }
+    
+    /**
+     * Prevents the server to allow new clients.
+     */
+    public void shutdown() {
+    	System.out.println("The server does not allow new clients anymore.");
+    	log(Level.INFO, "The server does not allow new clients anymore.");
+    	
+    	acceptingNewClients = false;
+    }
+    
+    /**
+     * Stops the server, which will disconnect all clients.
+     */
+    public void shutdownnow() {
+    	System.out.println("The server is going to close now.");
+    	
+    	stop();
+    }
+    
 	@Override
 	public void broadcast(Frame frame) {
 		logger.log(Level.INFO, "Broadcasting a frame : " + frame);
@@ -199,6 +268,11 @@ public class ChatHackServer implements Server {
 	
 	@Override
 	public void sendAuthRequest(String login, String password, ServerContext ctx) {
+		if ( !acceptingNewClients ) {
+			ctx.queueMessage(new ConnectionAnswerFrame((byte) 3));
+			return;
+		}
+		
 		ServerContext dbCtx = (ServerContext) dbServerKey.attachment();
 		
 		long id = System.currentTimeMillis(); // Generating a unique random identifier.
@@ -209,6 +283,11 @@ public class ChatHackServer implements Server {
 
 	@Override
 	public void sendAuthRequest(String login, ServerContext ctx) {
+		if ( !acceptingNewClients ) {
+			ctx.queueMessage(new ConnectionAnswerFrame((byte) 3));
+			return;
+		}
+		
 		ServerContext dbCtx = (ServerContext) dbServerKey.attachment();
 		
 		long id = System.currentTimeMillis(); // Generating a unique random identifier.

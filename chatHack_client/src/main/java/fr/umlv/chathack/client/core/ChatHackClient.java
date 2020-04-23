@@ -7,13 +7,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -46,11 +44,12 @@ public class ChatHackClient implements Client {
 	private final Map<Integer, String> privatePendingClients; // Clients asking for connection and having a token ID but not yet connected. Key:ClientID ; Value:Login
 	private final Map<String, ClientContext> privateAskingClients; // Clients asking for connection and not having a token ID. Key:Login ; Value:ClientContext
 	private final Map<String, Queue<PrivateMessageFrame>> privatePendingMessages; // Messages sent to a client whose communication has not yet been established. Key:login ; Value:Messages queue
+	private final Map<String, Queue<String>> privatePendingFiles; // Files sent to a client whose communication has not yet been established. Key:login ; Value:Files queue
 	
 	private final String login;
 	private final String password;
 	private final Path filesRepertory;
-	private int fileId = 0;
+	private int fileId;
     
     private final Thread mainThread;
 	
@@ -69,10 +68,12 @@ public class ChatHackClient implements Client {
 		this.privatePendingClients = new HashMap<>();
 		this.privateAskingClients = new HashMap<>();
 		this.privatePendingMessages = new HashMap<>();
+		this.privatePendingFiles = new HashMap<>();
 		
-		this.filesRepertory = Objects.requireNonNull(filesRepertory);
 		this.login = Objects.requireNonNull(login);
 		this.password = Objects.requireNonNull(password);
+		this.filesRepertory = Objects.requireNonNull(filesRepertory);
+		this.fileId = 0;
 		
 		this.mainThread = new Thread(this::run);
 	}
@@ -108,6 +109,8 @@ public class ChatHackClient implements Client {
 	 * 
 	 */
 	public void stop() {
+		logger.log(Level.INFO, "Stopping the main thread");
+		
 		mainThread.interrupt();
 	}
 	
@@ -207,14 +210,24 @@ public class ChatHackClient implements Client {
     		/* Sending authentication request for private server */
     		ctx.queueMessage(new PrivateAuthCliFrame(this.login, ctx.getTokenId()));
     		
-    		/* Sending messages that were pending */
-    		while ( !privatePendingMessages.get(ctx.getLogin()).isEmpty() ) {
-    			ctx.queueMessage(privatePendingMessages.get(ctx.getLogin()).remove());
-    		}
-    		privatePendingMessages.remove(ctx.getLogin());
-    		
     		/* Adding the private client to the list */
     		addPrivateClient(ctx.getLogin(), ctx);
+    		
+    		/* Sending messages that were pending */
+    		if ( privatePendingMessages.containsKey(ctx.getLogin()) ) {
+        		while ( !privatePendingMessages.get(ctx.getLogin()).isEmpty() ) {
+        			ctx.queueMessage(privatePendingMessages.get(ctx.getLogin()).remove());
+        		}
+        		privatePendingMessages.remove(ctx.getLogin());
+    		}
+
+    		/* Sending files that were pending */
+    		if ( privatePendingFiles.containsKey(ctx.getLogin()) ) {
+        		while ( !privatePendingFiles.get(ctx.getLogin()).isEmpty() ) {
+        			sendFile(privatePendingFiles.get(ctx.getLogin()).remove(), ctx.getLogin());
+        		}
+        		privatePendingFiles.remove(ctx.getLogin());
+    		}
     	}
 	}
     
@@ -249,6 +262,9 @@ public class ChatHackClient implements Client {
         
         if ( !key.equals(publicServerChannelKey) ) {
         	privateClients.remove(ctx.getLogin());
+        	System.out.println("Connection interrupted with " + ctx.getLogin());
+        } else {
+        	System.out.println("Connection interrupted with public server");
         }
         
         try {
@@ -271,6 +287,7 @@ public class ChatHackClient implements Client {
     	}
     	
     	logger.log(Level.INFO, "Private communication possible with " + login);
+    	System.out.println("Private communication possible with " + login);
     }
     
     /**
@@ -409,70 +426,93 @@ public class ChatHackClient implements Client {
     }
     
     /**
+     * Starts a new thread which will send the content of a file slaves by slaves.
+     * 
+     * @param ctx The recipient client context.
+     * @param fileName The file path to send.
+     * @param currentId The file ID.
+     */
+    private void sendFileBySlaves(ClientContext ctx, String fileName, int currentId) {
+    	log(Level.INFO, "Starting sending the file " + fileName);
+    	
+		new Thread(() -> {
+			try (FileInputStream ios = new FileInputStream(filesRepertory.resolve(fileName).toString())) {
+				byte[] buffer = new byte[1024];
+				var read = 0;
+				var cpt = 0;
+				try {
+					while ((read = ios.read(buffer)) != -1) {
+						ctx.queueMessage(new DlFileFrame(currentId, read, buffer));
+						cpt++;
+						if (cpt % 20 == 0) {
+							try {
+								Thread.sleep(100);
+							} catch (InterruptedException e) {
+								return;
+							}
+						}
+					}
+				} catch (IOException ioe) {
+					log(Level.SEVERE, "Error while reading the file to send", ioe);
+					return;
+				}
+			} catch (FileNotFoundException fnfe) {
+				log(Level.SEVERE, "File not found", fnfe); // this should never happened
+				return;
+			} catch (IOException ioe2) {
+				log(Level.SEVERE, "Error while closing FileInputStream", ioe2);
+			}
+		}).start();
+		
+		log(Level.INFO, "Sending of file " + fileName + " complete");
+    }
+    
+    /**
      * Send a file to the recipient client, chunk by chunk.
      * 
      * @param fileName The name of the file in the files directory.
      * @param login The login of the recipient client.
-     * @throws FileNotFoundException  it should never happened
+     * 
+     * @throws FileNotFoundException It should never happened.
      */
     public void sendFile(String fileName, String login) {
-    	/**
-    	 * TODO : Faire l'envoi de fichier. Eventuellement lancer un nouveau thread qui le fait, pour ne pas bloquer le reste.
-    	 * Les infos :
-    	 * context du client à qui envoyer le fichier : ClientContext ctx = privateClients.get(login);
-    	 * Envoi de la frame au client : ctx.queueMessage(frame).
-    	 * 
-    	 * D'abord vérifier si le login fait partis des clients connectés : privateClients.contains(login)
-    	 * Aussi vérifier si le fichier existe bien dans le repertoire des fichiers 'filesRepertory'.
-    	 */
-    	if (!privateClients.containsKey(login)) {
-    		logger.info("Connection must be open to send file");
-    		return ;
-    	}
-    	
-    	var path = filesRepertory + "/" + fileName;
-    	var f = new File(path);
-    	if (!f.exists()) {
-    		logger.info("File : " + path + " must exist to be send.");
-    		return ;
-    	}
-    	if (f.length() > Integer.MAX_VALUE) {
-    		logger.info("File too big to be send");
-    		return ;
-    	}
-    	var currentId = fileId;
-    	fileId++;
-    	var ctx = privateClients.get(login);
-    	ctx.queueMessage(new InitSendFileFrame(fileName, (int) f.length(), currentId)); 
-    	new Thread(() ->{
-    		try (FileInputStream ios = new FileInputStream(filesRepertory + "/" + fileName)) {
-    			byte[] buffer = new byte[1024];
-        		var read = 0;
-        		var cpt = 0;
-        		try {
-    				while ((read = ios.read(buffer)) != -1) {
-    					ctx.queueMessage(new DlFileFrame(currentId, read, buffer)); 
-    					cpt++;
-    					if (cpt%20 == 0) {
-    						try {
-								Thread.sleep(1000);
-							} catch (InterruptedException e) {
-								return ;
-							}
-    					}
-    				}
-    			} catch (IOException e) {
-    				logger.info("problem while sending file");
-    	    		return ;
-    			}
-    		} catch (FileNotFoundException e1) {
-    			System.err.println("File not fount"); //this should never happened 
-    			return ;
-    		} catch (IOException e2) {
-				System.err.println("problem while closing FileInputStream");
+		if (!privateClients.containsKey(login)) {				// If communication has not been established yet
+			if ( privatePendingFiles.containsKey(login) ) {		// If request for private communication has been sent but not yet established
+				privatePendingFiles.get(login).add(fileName);
+			} else {											// If request for private communication establishment has not been sent
+				ClientContext ctx = (ClientContext) publicServerChannelKey.attachment();
+				
+        		/* Ask for private communication establishment */
+        		ctx.queueMessage(new PrivateRequestFrame(login));
+        		
+        		/* Queuing files requests */
+				privatePendingFiles.put(login, new LinkedList<String>());
+				privatePendingFiles.get(login).add(fileName);
 			}
-    		
-    	}).start();
+			
+			return;
+		}
+
+		var path = filesRepertory.resolve(fileName).toString();
+		var f = new File(path);
+		
+		if (!f.exists()) {
+			System.err.println("Unable to access the file at " + path);
+			return;
+		}
+		
+		if (f.length() > Integer.MAX_VALUE) {
+			System.err.println("Only files smaller than 2GB are allowed");
+			return;
+		}
+		
+		var currentId = fileId;
+		fileId++;
+		
+		var ctx = privateClients.get(login);
+		ctx.queueMessage(new InitSendFileFrame(fileName, (int) f.length(), currentId));
+		
+		sendFileBySlaves(ctx, fileName, currentId);
     }
     
 	@Override
@@ -504,9 +544,14 @@ public class ChatHackClient implements Client {
     }
     
     @Override
+    public void clearPendingFiles(String login) {
+    	privatePendingFiles.remove(login);
+    }
+    
+    @Override
     public void addAskingClient(String login, ClientContext ctx) {
 		System.out.println(login + " wants to establish a communication with you.");
-		System.out.println("Reply with '/" + login + " no' if you want to refuse." +
+		System.out.println("Reply with '/" + login + " no' if you want to refuse. " +
 						   "Other replies to " + login + " will have the effect of accepting the communication.");
     	
     	privateAskingClients.put(login, ctx);
@@ -514,37 +559,34 @@ public class ChatHackClient implements Client {
     
     @Override
     public FileOutputStream createNewFile(String fileName) {
-    	/* TODO Créer un fichier unique (Faire attention aux noms dupliqués)
-    	 * dans le répertoire 'filesRepertory'.
-    	 */
-    	File dir = new File(filesRepertory.toString());
+		File dir = new File(filesRepertory.toString());
 		var pathNumber = 1;
 		if (!dir.exists())
 			dir.mkdirs();
-		var path = filesRepertory + "/" +  fileName;
+		var path = filesRepertory.resolve(fileName).toString();
 		File f = new File(path);
 		try {
-			// Create a new file like fileName (i) if already exist
-			while(!f.createNewFile()) {
-				var splited = path.split("\\.");
-				if (splited.length >= 2) {
-					splited[splited.length - 1 ] = " (" + pathNumber + ")." + splited[splited.length - 1 ];
-				}else {
-					splited[0] = splited[0] +  " (" + pathNumber +")";
-				}
-				var newPath = String.join("", splited);
-				f = new File(newPath);
-				pathNumber++;
-			}
+			// Creates a new file like fileName (i) if already exist
+			while (!f.createNewFile()) {
+                var splited = path.split("\\.");
+                if (splited.length > 1) {
+                	splited[splited.length - 2] =  splited[splited.length - 2] + "_(" + pathNumber + ")";
+                } else {
+                    //length == 1
+                    splited[0] = splited[0] + "(" + pathNumber + ")";
+                }
+                var newPath = String.join(".", splited);
+                f = new File(newPath);
+                pathNumber++;
+            }
 		} catch (IOException e) {
 			System.err.println("File can't be created");
 		}
-    	try {
-			return new FileOutputStream(f.getPath(), true); // Create the file in append mode
+		try {
+			return new FileOutputStream(f.getPath(), true); // Creates the file in append mode
 		} catch (FileNotFoundException e) {
 			System.err.println("Probleme while creating FileOutputStream");
-			return null; //Should never happened 
+			return null; // Should never happened
 		}
-    	
     }
 }
