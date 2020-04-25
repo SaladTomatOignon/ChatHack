@@ -12,7 +12,7 @@ public class DlFileFrame implements Frame{
 	public DlFileFrame(int fileId, int dataSize, byte[] data) {
 		this.fileId = fileId;
 		this.dataSize = dataSize;
-		this.data = Arrays.copyOf(data, dataSize);
+		this.data = Arrays.copyOfRange(data, 0, dataSize);
 	}
 	
 	
@@ -24,14 +24,13 @@ public class DlFileFrame implements Frame{
 
 	@Override
 	public byte[] getBytes() {
-		var bb = ByteBuffer.allocate(1024);
-
+		var bb = ByteBuffer.allocate(2048);
+		
 		bb.put((byte) 7);
 
 		bb.putInt(fileId);
 		
 		bb.putInt(dataSize);
-		
 		bb.put(data);
 
 		bb.flip();

@@ -38,7 +38,7 @@ public class DlFileReader implements Reader{
 		case WAITING_FILE_ID:
 			if (bb.remaining() >= Integer.BYTES) {
 				fileId = bb.getInt();
-				state = State.WAITING_FILE_ID;
+				state = State.WAITING_DATA_SIZE;
 			}else {
 				return ProcessStatus.REFILL;
 			}
@@ -46,7 +46,7 @@ public class DlFileReader implements Reader{
 		case WAITING_DATA_SIZE:
 			if (bb.remaining() >= Integer.BYTES) {
 				dataSize = bb.getInt();
-				state = State.WAITING_FILE_ID;
+				state = State.WAITING_DATA;
 			}else {
 				return ProcessStatus.REFILL;
 			}

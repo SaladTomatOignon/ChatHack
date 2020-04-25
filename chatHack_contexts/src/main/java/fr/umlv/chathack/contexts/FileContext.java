@@ -96,9 +96,12 @@ public class FileContext {
 	 * @throws IOException
 	 */
 	public boolean flush() throws IllegalStateException, IOException {
+		
 		if (state != State.FULL && totalReceived < size) {
 			throw new IllegalStateException("The buffer is not full");
 		}
+		
+		
 
 		data.flip();
 		byte[] arr = new byte[data.remaining()];
@@ -119,6 +122,8 @@ public class FileContext {
 		overageData.flip();
 		data.put(overageData);
 		overageData.clear();
+		
+		state = State.REFILL;
 
 		return size != totalReceived;
 	}
