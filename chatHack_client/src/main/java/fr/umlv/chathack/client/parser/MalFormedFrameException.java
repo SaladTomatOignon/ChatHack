@@ -11,4 +11,8 @@ public class MalFormedFrameException extends Exception {
 		super();
 	}
 	
+	public MalFormedFrameException(String msg) {
+		super(msg);
+	}
+	
 }

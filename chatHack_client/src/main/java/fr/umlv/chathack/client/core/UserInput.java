@@ -14,14 +14,14 @@ public class UserInput {
 	}
 	
 	public void interact() {
-		try (Scanner scanner = new Scanner(System.in)) {
+		try (Scanner scanner = new Scanner(System.in, "UTF-8")) {
 			while ( scanner.hasNextLine() ) {
 				String line = scanner.nextLine();
 				
 				try {
 					Parser.parse(client, line);
 				} catch (MalFormedFrameException e) {
-					System.out.println("Invalid syntax");
+					System.err.println("Invalid syntax" + (e.getMessage() == null ? "" : " : " + e.getMessage()));
 					continue;
 				}
 			}
