@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class PrivateAnswerFromCliFrame implements Frame {
+public class PrivateAnswerFromCliFrame extends AbstractFrame {
 	
 	private byte responceCode;
 	private String name;

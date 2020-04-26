@@ -3,7 +3,7 @@ package fr.umlv.chathack.resources.frames;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-public class DlFileFrame implements Frame{
+public class DlFileFrame extends AbstractFrame {
 	private int fileId;
 	private int dataSize;
 	private byte data[];
@@ -25,12 +25,13 @@ public class DlFileFrame implements Frame{
 	@Override
 	public byte[] getBytes() {
 		var bb = ByteBuffer.allocate(2048);
-		
+
 		bb.put((byte) 7);
 
 		bb.putInt(fileId);
 		
 		bb.putInt(dataSize);
+		
 		bb.put(data);
 
 		bb.flip();

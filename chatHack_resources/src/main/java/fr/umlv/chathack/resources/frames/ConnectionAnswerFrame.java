@@ -2,7 +2,7 @@ package fr.umlv.chathack.resources.frames;
 
 import java.nio.ByteBuffer;
 
-public class ConnectionAnswerFrame implements Frame {
+public class ConnectionAnswerFrame extends AbstractFrame {
 
 	private byte responceCode;
 	

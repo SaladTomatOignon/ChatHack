@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 
-public class InfoFrame implements Frame{
+public class InfoFrame extends AbstractFrame {
 
 	private byte infoCode;
 	private String message;

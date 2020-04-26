@@ -3,7 +3,7 @@ package fr.umlv.chathack.resources.frames;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class PublicMessageFromServFrame implements Frame {
+public class PublicMessageFromServFrame extends AbstractFrame {
 
 	private String message;
 	private String name;

@@ -7,7 +7,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class PrivateAnswerFrame implements Frame {
+public class PrivateAnswerFrame extends AbstractFrame {
 	
 	private byte responceCode;
 	private String name;

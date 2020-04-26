@@ -3,7 +3,7 @@ package fr.umlv.chathack.resources.frames;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class RequestLoginExistFrame implements Frame{
+public class RequestLoginExistFrame extends AbstractFrame {
 	private long id;
 	private String login;
 

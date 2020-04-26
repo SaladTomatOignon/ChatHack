@@ -3,7 +3,7 @@ package fr.umlv.chathack.resources.frames;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class PrivateAuthCliFrame implements Frame{
+public class PrivateAuthCliFrame extends AbstractFrame {
 	private String name;
 	private int tokenId;
 	

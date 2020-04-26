@@ -3,7 +3,7 @@ package fr.umlv.chathack.resources.frames;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class InitSendFileFrame implements Frame{
+public class InitSendFileFrame extends AbstractFrame {
 	
 	private String fileName;
 	private int fileSize;

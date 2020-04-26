@@ -15,7 +15,6 @@ public class PublicMessageFromServReader implements Reader{
 	private String message;
 	private String name;
 	
-	private final ByteBuffer bb;
 	private State state = State.WAITING_NAME;
 	
 	private StringReader strReader;
@@ -24,7 +23,6 @@ public class PublicMessageFromServReader implements Reader{
 	
 	
 	public PublicMessageFromServReader(ByteBuffer bb) {
-		this.bb = bb;
 		this.strReader = new StringReader(bb);
 	}
 

@@ -15,7 +15,6 @@ public class PublicMessageFromCliReader implements Reader{
 	
 	private String message;
 	
-	private final ByteBuffer bb;
 	private State state = State.WAITING_MESSAGE;
 	
 	private StringReader strReader;
@@ -24,7 +23,6 @@ public class PublicMessageFromCliReader implements Reader{
 	
 	
 	public PublicMessageFromCliReader(ByteBuffer bb) {
-		this.bb = bb;
 		this.strReader = new StringReader(bb);
 	}
 

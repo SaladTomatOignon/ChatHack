@@ -1,7 +1,7 @@
 package fr.umlv.chathack.resources.frames;
 
 
-public class BddPositiveResponceFrame implements Frame{
+public class BddPositiveResponceFrame extends AbstractFrame {
 	private long id;
 
 	public BddPositiveResponceFrame(long id) {

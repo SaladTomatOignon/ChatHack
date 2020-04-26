@@ -5,21 +5,28 @@ import java.io.IOException;
 public interface Frame {
 	
 	/**
-	 * Retrieve the frame content size in bytes
+	 * Retrieves the frame content size in bytes
 	 * 
 	 * @return The frame size
 	 */
 	int size();
 	
 	/**
-	 * Retrieve the bytes constituting the frame
+	 * Retrieves the bytes constituting the frame
 	 * 
 	 * @return The content bytes of the frame
 	 */
 	byte[] getBytes();
 	
 	/**
-	 * Perform the frame action on the given client.
+	 * Retrieves the time at which the frame was created, in nanoseconds.
+	 * 
+	 * @return The time at which the frame was created, in nanoseconds.
+	 */
+	long getCreationTime();
+	
+	/**
+	 * Performs the frame action on the given client.
 	 * 
      * @param client The client to perform the action.
      * 
@@ -30,7 +37,7 @@ public interface Frame {
 	};
 	
 	/**
-	 * Perform the frame action on the given server.
+	 * Performs the frame action on the given server.
 	 * 
      * @param server The server to perform the action.
      * 

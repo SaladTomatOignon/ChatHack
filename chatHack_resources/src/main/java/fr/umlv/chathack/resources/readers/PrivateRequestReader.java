@@ -15,7 +15,6 @@ public class PrivateRequestReader implements Reader{
 	
 	private String name;
 	
-	private final ByteBuffer bb;
 	private State state = State.WAITING_NAME;
 	
 	private StringReader strReader;
@@ -26,7 +25,6 @@ public class PrivateRequestReader implements Reader{
 	
 	
 	public PrivateRequestReader(ByteBuffer bb) {
-		this.bb = bb;
 		this.strReader = new StringReader(bb);
 	}
 

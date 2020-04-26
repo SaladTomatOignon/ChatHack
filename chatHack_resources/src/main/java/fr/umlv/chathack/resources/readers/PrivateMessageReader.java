@@ -16,7 +16,6 @@ public class PrivateMessageReader implements Reader{
 	
 	private String message;
 	
-	private final ByteBuffer bb;
 	private State state = State.WAITING_MESSAGE;
 	
 	private StringReader strReader;
@@ -25,7 +24,6 @@ public class PrivateMessageReader implements Reader{
 	
 	
 	public PrivateMessageReader(ByteBuffer bb) {
-		this.bb = bb;
 		this.strReader = new StringReader(bb);
 	}
 
