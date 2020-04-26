@@ -32,7 +32,7 @@ public class ServerContext extends Context implements ServerVisitor {
     }
     
     /**
-     * Confirm the login of the client.
+     * Confirms the login of the client.
      * 
      */
     public void confirmAuthentication() {
@@ -96,7 +96,7 @@ public class ServerContext extends Context implements ServerVisitor {
 			return;
 		}
 		
-		server.broadcast(new PublicMessageFromServFrame(login, message));
+		server.broadcast(new PublicMessageFromServFrame(login, message), login);
 	}
 
 	@Override

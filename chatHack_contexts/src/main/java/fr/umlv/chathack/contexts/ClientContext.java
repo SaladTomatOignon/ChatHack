@@ -6,6 +6,8 @@ import java.nio.channels.SelectionKey;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 
 import fr.umlv.chathack.contexts.FileContext.State;
@@ -17,6 +19,9 @@ import fr.umlv.chathack.resources.readers.Reader;
 public class ClientContext extends Context implements ClientVisitor {
     final private Client client;
     final private Map<Integer, FileContext> files;
+    
+	private final ReentrantLock lock;
+	private final Condition isQueueEmptyCondition;
     
     private String login; // The client login, may be null.
     private int tokenID; // The ID used to communicate the client, -1 if not assigned.
@@ -31,8 +36,25 @@ public class ClientContext extends Context implements ClientVisitor {
         this.client = client;
         this.files = new HashMap<>();
         
+        this.lock = new ReentrantLock();
+        this.isQueueEmptyCondition = lock.newCondition();
+        
         this.login = null;
         this.tokenID = -1;
+    }
+    
+    @Override
+    protected void processOut() {
+    	super.processOut();
+    	
+		lock.lock();
+		try {
+			if ( getQueueSize() == 0 ) {
+				isQueueEmptyCondition.signal();
+			}
+		} finally {
+			lock.unlock();
+		}
     }
     
     /**
@@ -92,11 +114,29 @@ public class ClientContext extends Context implements ClientVisitor {
      * In other words if this client is part of the private clients list,
      * so we know his login and his ID.
      * 
-     * @return True if this client is authenticated
+     * @return True if this client is authenticated.
      */
     private boolean isPrivateAuthenticated() {
     	return !Objects.isNull(login) && tokenID != -1;
     }
+    
+	/**
+	 * Retrieves the lock's Condition isQueueEmpty.
+	 * 
+	 * @return The lock's Condition isQueueEmpty.
+	 */
+	public Condition getIsQueueEmptyCondition() {
+		return isQueueEmptyCondition;
+	}
+
+	/**
+	 * Retrieves the ReentrantLock lock.
+	 * 
+	 * @return The lock.
+	 */
+	public ReentrantLock getLock() {
+		return lock;
+	}
     
     @Override
     protected void acceptFrame(Frame frame) throws IOException {
@@ -154,7 +194,7 @@ public class ClientContext extends Context implements ClientVisitor {
 		if ( files.containsKey(fileID) ) {
 			log(Level.INFO, "The file (ID : " + fileID + ") is already downloading.");
 		} else {
-			files.put(fileID, new FileContext(fileSize, client.createNewFile(fileName)));
+			files.put(fileID, new FileContext(fileSize, fileName, client.createNewFile(fileName)));
 			
 			System.out.println("Starting downloading file " + fileName + "...");
 			log(Level.INFO, "Downloading file " + fileName + " of size " + fileSize + " and ID " + fileID + ".");
@@ -184,12 +224,12 @@ public class ClientContext extends Context implements ClientVisitor {
 				if ( !file.flush() ) {
 					// File is fully downloaded.
 					files.remove(fileID);
-					System.out.println("Download complete.");
-					log(Level.INFO, "Download of file with ID " + fileID + " complete.");
+					System.out.println("Download of file " + file.getFileName() + " complete.");
+					log(Level.INFO, "Download of file with ID " + fileID + " and name " + file.getFileName() + " complete.");
 				}
 			} catch (Exception e) {
 				files.remove(fileID);
-				log(Level.SEVERE, "Error while flushing the buffer into the file.", e);
+				log(Level.SEVERE, "Error while flushing the buffer into the file " + file.getFileName(), e);
 			}
 		}
 	}

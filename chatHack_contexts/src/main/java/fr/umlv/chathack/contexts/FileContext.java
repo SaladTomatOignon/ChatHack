@@ -9,6 +9,7 @@ public class FileContext {
 	private static final int BUFFER_SIZE = 512_000; // Buffer of 512 Ko
 	
 	private final int size;
+	private final String name;
 	private int totalReceived;
 	private final ByteBuffer data;
 	private final ByteBuffer overageData;
@@ -30,17 +31,27 @@ public class FileContext {
 	 * @param name The file name
 	 * @param size The full size of the file
 	 */
-	public FileContext(int size, FileOutputStream outputStream) {
+	public FileContext(int size, String name, FileOutputStream outputStream) {
 		if ( size <= 0 ) {
 			throw new IllegalArgumentException("The file size must be positive.");
 		}
 		
 		this.size = size;
+		this.name = Objects.requireNonNull(name);
+		this.outputStream = Objects.requireNonNull(outputStream);
 		this.totalReceived = 0;
 		this.data = ByteBuffer.allocate(BUFFER_SIZE);
 		this.overageData = ByteBuffer.allocate(BUFFER_SIZE);
-		this.outputStream = Objects.requireNonNull(outputStream);
 		this.state = State.REFILL;
+	}
+	
+	/**
+	 * Retrieves the file's name associated to this context.
+	 * 
+	 * @return The file's name.
+	 */
+	public String getFileName() {
+		return this.name;
 	}
 	
 	/**
@@ -96,12 +107,9 @@ public class FileContext {
 	 * @throws IOException
 	 */
 	public boolean flush() throws IllegalStateException, IOException {
-		
 		if (state != State.FULL && totalReceived < size) {
 			throw new IllegalStateException("The buffer is not full");
 		}
-		
-		
 
 		data.flip();
 		byte[] arr = new byte[data.remaining()];

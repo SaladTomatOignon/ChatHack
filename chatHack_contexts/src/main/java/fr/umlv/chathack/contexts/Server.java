@@ -31,6 +31,14 @@ public interface Server {
 	 */
 	void broadcast(Frame frame);
 	
+	/**
+	 * Broadcast a frame to every connected and authenticated clients excepted
+	 * clients contained in the logins list.
+	 * 
+	 * @param frame The frame to broadcast.
+	 */
+	void broadcast(Frame frame, String... logins);
+	
     /**
      * Send a frame to a specific client authenticated to the server.
      * 
