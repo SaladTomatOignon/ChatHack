@@ -15,7 +15,7 @@ public class UserInput {
 			while ( scanner.hasNextLine() ) {
 				String line = scanner.nextLine();
 				
-				switch (line) {
+				switch (line.toUpperCase()) {
 					case "INFO":
 						server.showInfos();
 						break;

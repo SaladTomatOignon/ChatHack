@@ -2,11 +2,13 @@ package fr.umlv.chathack.server.core;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -53,6 +55,17 @@ public class ChatHackServer implements Server {
         this.acceptingNewClients = true;
 	}
 	
+	/**
+	 * Starts the server on a new thread, with reset parameters.</br>
+	 * Starts by trying to connect to the database server to which the server will verify the authenticity of the clients.</br>
+	 * <br>
+	 * The server does not stop accepting new clients until another thread interrupt this thread or if it
+	 * calls the server.shutdown() method.</br>
+	 * </br>
+	 * Informations about the server state can be given with server.showInfos().
+	 * 
+	 * @throws IOException if acceptance of a new client failed.
+	 */
     public void launch() throws IOException {
 		if ( mainThread.isAlive() ) {
 			throw new IllegalStateException("Server is already running");
@@ -61,7 +74,6 @@ public class ChatHackServer implements Server {
 			init();
 			mainThread.start();
 		} catch (UncheckedIOException tunneled) {
-			// C'est ici qu'on pourrait éventuellement essayer de relancer la connexion au lieu de propager l'exception
 			throw tunneled.getCause();
 		}
     }
@@ -91,14 +103,25 @@ public class ChatHackServer implements Server {
 		}
     }
     
+    /**
+     * Silently closes every socketChannel registered by the selector.
+     */
+    private void disconnectAllClients() {
+    	for (var key : selector.keys()) {
+    		if ( !(key.channel() instanceof ServerSocketChannel) ) {
+    			silentlyClose(key);
+    		}
+    	}
+    }
+    
 	/**
-	 * Stop the client thread.<br>
-	 * It does not reset client parameters (buffers, queue and frame reader)
-	 * 
+	 * Stop the client thread and interrupts the connection with all connected clients.<br>
+	 * It does not reset client parameters (buffers, queue and frame reader).
 	 */
 	public void stop() {
 		logger.log(Level.INFO, "Stopping the main thread");
 		
+		disconnectAllClients();
 		mainThread.interrupt();
 	}
     
@@ -118,7 +141,7 @@ public class ChatHackServer implements Server {
     }
     
 	/**
-	 * Perform an action according to the available state of the given SelectionKey.
+	 * Performs an action according to the available state of the given SelectionKey.
 	 * 
 	 * @param key The key ready for an I/O action.
 	 * 
@@ -158,7 +181,13 @@ public class ChatHackServer implements Server {
     private void doConnect(SelectionKey key) throws IOException {
     	SocketChannel sc = (SocketChannel) key.channel();
     	
-    	if ( !sc.finishConnect() ) {
+    	try {
+        	if ( !sc.finishConnect() ) {
+        		return;
+        	}
+    	} catch (ConnectException e) {
+    		System.err.println("Error : Connection with database server impossible, it musts be opened on port " + DB_PORT);
+    		logger.log(Level.SEVERE, "Connection refused to the server", e);
     		return;
     	}
     	
@@ -185,10 +214,10 @@ public class ChatHackServer implements Server {
     }
 	
     /**
-     * Close the connection with the socketChannel.
-     * It does not throw exception if an I/O error occurs.
-     * 
-     * Remove the client associated to the key from the authenticated list.
+     * Close the connection with the socketChannel.</br>
+     * It does not throw exception if an I/O error occurs.</br>
+     * </br>
+     * Removes the client associated to the key from the authenticated list.
      * 
      */
     private void silentlyClose(SelectionKey key) {
@@ -221,7 +250,7 @@ public class ChatHackServer implements Server {
      * Prints informations about the current state of the server.
      */
     public void showInfos() {
-    	System.out.println("There are " + authenticatedClients.size() + " clients authenticated to the server :");
+    	System.out.println("There are " + authenticatedClients.size() + " client(s) authenticated to the server :");
     	authenticatedClients.keySet().forEach(login -> System.out.println("- " + login));
     }
     
@@ -250,6 +279,21 @@ public class ChatHackServer implements Server {
 		
 		for (var client : authenticatedClients.keySet()) {
 			var ctx = authenticatedClients.get(client);
+			
+			ctx.queueMessage(frame);
+		}
+	}
+	
+	@Override
+	public void broadcast(Frame frame, String... logins) {
+		logger.log(Level.INFO, "Broadcasting a frame : " + frame);
+		
+		for (var client : authenticatedClients.keySet()) {
+			var ctx = authenticatedClients.get(client);
+			
+			if ( Arrays.asList(logins).contains(ctx.getLogin()) ) {
+				continue;
+			}
 			
 			ctx.queueMessage(frame);
 		}
