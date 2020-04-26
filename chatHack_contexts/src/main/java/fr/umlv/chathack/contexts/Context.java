@@ -72,7 +72,7 @@ public abstract class Context {
 					return 1;
 				}
 				
-				return (int) (f2.getCreationTime() - f1.getCreationTime());
+				return (int) (f1.getCreationTime() - f2.getCreationTime());
 			}
     		
     	};
