@@ -7,6 +7,18 @@ import java.util.function.Supplier;
 
 import fr.umlv.chathack.resources.frames.Frame;
 
+/**
+ * 
+ * This class is used to process the data in the ByteBuffer bb.
+ * The state is used to know what to do when the method process is called.
+ * The state WAITING_OPCODE mean that we are still waiting for the first byte of the frame. 
+ * As soon as you got it, the method will process the data of the corresponding reader. 
+ * the map is only use to associate an opCode to a reader. 
+ * 
+ * When the frame is totally receive the Frame will be created. 
+ * And the method return the Frame corresponding to the data processed. 
+ *
+ */
 public class FrameReader implements Reader {
 
 	private enum State {
@@ -30,7 +42,6 @@ public class FrameReader implements Reader {
 	private DlFileReader dlFileReader;
 	private ConnectionAnswerReader connectionAnswerReader;
 	private PublicMessageFromServReader publicMessageFromServReader;
-//	private PrivateRequestReader privateRequestReader;
 	private PrivateAnswerReader privateAnswerReader;
 	private InfoReader infoReader;
 
@@ -77,7 +88,10 @@ public class FrameReader implements Reader {
 				new InitSendFileReader(bb), new DlFileReader(bb), new ConnectionAnswerReader(bb),
 				new PublicMessageFromServReader(bb), new PrivateAnswerReader(bb), new InfoReader(bb));
 	}
-
+	
+	/**
+	 * This method will try to get the opCode then it will call the associated function in the map.
+	 */
 	@Override
 	public ProcessStatus process() {
 		if (state == State.DONE || state == State.ERROR) {
@@ -99,60 +113,12 @@ public class FrameReader implements Reader {
 		}
 
 		return ProcessStatus.REFILL;
-
-//		ProcessStatus status;
-//		switch (opCode) {
-//		case 0:
-//			return test(connectionAnswerReader);
-////			status = connectionAnswerReader.process();
-////			if (status != ProcessStatus.DONE) {
-////				return status;
-////			} else {
-////				state = State.DONE;
-////				bb.compact();
-////				frame = (Frame) connectionAnswerReader.get();
-////				return ProcessStatus.DONE;
-////			}
-//
-//		case 1: 
-//			status = publicMessageReader.process();
-//			if (status != ProcessStatus.DONE) {
-//				return status;
-//			} else {
-//				state = State.DONE;
-//				bb.compact();
-//				frame = (Frame) publicMessageReader.get();
-//				return ProcessStatus.DONE;
-//			}
-//		case 2: 
-//			status = privateRequestReader.process();
-//			if (status != ProcessStatus.DONE) {
-//				return status;
-//			} else {
-//				state = State.DONE;
-//				bb.compact();
-//				frame = (Frame) privateRequestReader.get();
-//				return ProcessStatus.DONE;
-//			}
-//		case 3: 
-//			status = privateAnswerReader.process();
-//			if (status != ProcessStatus.DONE) {
-//				return status;
-//			} else {
-//				state = State.DONE;
-//				bb.compact();
-//				frame = (Frame) privateAnswerReader.get();
-//				return ProcessStatus.DONE;
-//			}
-//		case 4: // TODO Call apropriate function of coresponding reader
-//			System.out.println(4);
-//			break;
-//		default:
-//			throw new IllegalStateException("Non valid Op_Code");
-//		}
-//		return ProcessStatus.REFILL;
 	}
 
+
+	/**
+	 * It will return the Frame corresponding of the one extracted from the ByteBuffer.
+	 */
 	@Override
 	public Object get() {
 		if (state != State.DONE) {
@@ -162,6 +128,10 @@ public class FrameReader implements Reader {
 		return frame;
 	}
 
+	
+	/**
+	 * Reset the object in his initial state.
+	 */
 	@Override
 	public void reset() {
 		if (bb.position() != 0) {
@@ -208,7 +178,11 @@ public class FrameReader implements Reader {
 			break;
 		}
 	}
-
+	/**
+	 * function to execute the reader's process method
+	 * @param reader
+	 * @return ProcessStatus DONE if finish or REFILL if needed or ERROR if one occur 
+	 */
 	private ProcessStatus processReader(Reader reader) {
 		var status = reader.process();
 		if (status != ProcessStatus.DONE) {
