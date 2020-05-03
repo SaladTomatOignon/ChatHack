@@ -6,7 +6,7 @@
 
 	<groupId>fr.umlv</groupId>
 	<artifactId>chatHack_server</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0</version>
 
 	<name>Serveur implémentant le protocole ChatHack</name>
 
@@ -20,13 +20,13 @@
 		<dependency>
 			<groupId>fr.umlv</groupId>
 			<artifactId>chatHack_contexts</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>1.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>fr.umlv</groupId>
 			<artifactId>chatHack_resources</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>1.0</version>
 		</dependency>
 	</dependencies>
 
