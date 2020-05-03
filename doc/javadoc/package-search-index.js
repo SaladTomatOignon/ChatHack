@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","url":"allpackages-index.html"},{"l":"fr.umlv.chathack.client.core"},{"l":"fr.umlv.chathack.client.main"},{"l":"fr.umlv.chathack.client.parser"},{"l":"fr.umlv.chathack.contexts"},{"l":"fr.umlv.chathack.resources.frames"},{"l":"fr.umlv.chathack.resources.readers"},{"l":"fr.umlv.chathack.server.core"},{"l":"fr.umlv.chathack.server.main"}]

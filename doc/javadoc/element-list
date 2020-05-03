@@ -1,0 +1,8 @@
+fr.umlv.chathack.client.core
+fr.umlv.chathack.client.main
+fr.umlv.chathack.client.parser
+fr.umlv.chathack.contexts
+fr.umlv.chathack.resources.frames
+fr.umlv.chathack.resources.readers
+fr.umlv.chathack.server.core
+fr.umlv.chathack.server.main
