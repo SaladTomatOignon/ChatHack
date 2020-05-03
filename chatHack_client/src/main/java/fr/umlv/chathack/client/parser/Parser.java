@@ -20,7 +20,9 @@ public class Parser {
 				String recipientClient = sequences[0].substring(1);
 				String msg = sequences[1];
 				
-				if ( msg.isBlank() ) {
+				if ( recipientClient.isBlank() ) {
+					throw new MalFormedFrameException("Recipient client's login can not be blank.");
+				} else if ( msg.isBlank() ) {
 					throw new MalFormedFrameException("Messages can not be blank.");
 				}
 				
@@ -30,7 +32,9 @@ public class Parser {
 				String recipientClient = sequences[0].substring(1);
 				String fileName = sequences[1];
 				
-				if ( fileName.isBlank() ) {
+				if ( recipientClient.isBlank() ) {
+					throw new MalFormedFrameException("Recipient client's login can not be blank.");
+				} else if ( fileName.isBlank() ) {
 					throw new MalFormedFrameException("You must enter a file name.");
 				}
 				

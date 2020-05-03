@@ -547,6 +547,11 @@ public class ChatHackClient implements Client {
      * @throws FileNotFoundException It should never happened.
      */
     public void sendFile(String fileName, String login) {
+    	if ( login.equals(this.login) ) {
+    		System.out.println("You can't establish a private communication with yourself");
+    		return;
+    	}
+    	
 		if (!privateClients.containsKey(login)) {				// If communication has not been established yet
 			if ( privatePendingFiles.containsKey(login) ) {		// If request for private communication has been sent but not yet established
 				privatePendingFiles.get(login).add(fileName);
